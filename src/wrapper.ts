@@ -95,10 +95,16 @@ export class Wrapper {
     /**
      * Sets the `style` attribute of the wrapped element
      * @param styleString string literal for css styles
+     * @param append true = append to the existing styles; false =  replace it
      * @returns the Wrapper, for chaining
      */
-    style = (styleString: string): Wrapper =>{
-        this.element.setAttribute('style',styleString);
+    style = (styleString: string, append?: boolean): Wrapper =>{
+        let style = "";
+        if(append && this.element.getAttribute('style')!=null){
+            style = this.element.getAttribute('style')!.trim();
+            if(style.charAt(style.length-1)!=";") style = style + "; "
+        }
+        this.element.setAttribute('style',style + styleString);
         return this
     }
 
@@ -122,11 +128,49 @@ export class Wrapper {
         return this
     }
 
+    
+    /**
+     * Returns the value of a given attribute on the wrapped element
+     * @returns the value of attribute on the element, or null if no attribute exists
+     */
+     getAttr = (attribute: string): string | null =>{
+        return this.element.getAttribute(attribute);
+    }
+
+    /**
+     * Simple alias for {@link attr}.
+     * @param attribute attribute name to set
+     * @param value the value to set
+     * @returns the Wrapper, for chaining
+     */
+    setAttr = (attribute: string, value: string): Wrapper =>{
+        return this.attr(attribute, value);
+    }
+
+    /**
+     * Returns the innerText of the wrapped element
+     * @returns the innerText of the wrapped element
+     */
+     getText= (): string =>{
+        return this.element.innerText;
+    }
+
+    /**
+     * Simple alias for {@link text}.
+     * @param text string to set
+     * @returns the Wrapper, for chaining
+     */
+    setText = (text: string): Wrapper =>{
+        return this.text(text);
+    }
+
+
     /**
      * Gets the value of Wrapped things like inputs, textareas
      * @returns the value of the wrapped element
      */
     getVal = () => {
+        if(this.element.tagName == 'INPUT' && this.getAttr('type') == "checkbox") return (<HTMLInputElement>this.element).checked;        
         return (<HTMLInputElement>this.element).value //inline type assertion IS possible
     }
 
@@ -212,7 +256,8 @@ export class Wrapper {
      * @param idList 
      * @returns the Wrapper, for chaining
      */
-    selectContent(textList: string[], valList: string[], idList?: string[]) {
+    selectContent(textList: string[], valList?: string[], idList?: string[]) {
+        if(!valList) valList = textList;
         if (textList.length != valList.length) {
             console.error({ 'not the same length': textList, 'as': valList });
             throw new Error('textList and idList not the same length');
@@ -223,11 +268,11 @@ export class Wrapper {
                 throw new Error('textList and idList not the same length');
             }
             textList.forEach((text, ind) => {
-                this.newWrap('option', {id:idList[ind]}).text(text).setVal(valList[ind]);
+                this.newWrap('option', {id:idList[ind]}).text(text).setVal(valList![ind]);
             })
         } else {
             textList.forEach((text, ind) => {
-                this.newWrap('option').text(text).setVal(valList[ind]);
+                this.newWrap('option').text(text).setVal(valList![ind]);
             })
         }
         return this;
@@ -235,23 +280,53 @@ export class Wrapper {
 
     /**
      * Creates a flexbox-wrapped label & input pair
-     * @param labelText what the label should say
-     * @param inputType e.g. 'text', 'date', 'number'
+     * @param inputTag input or textarea
      * @param id the id to use for the input element
+     * @param location where the labeled input should be in relation to its caller
      * @returns the Wrapper (for the outer div)
      */
-    labeledInput(labelText: string, inputType: string, id: string, location: "inside" | "before" | "after"): WrappedInputLabelPair{
-        //TODO - pick up here after
+    makeLabeledInput(id: string, inputTag?: 'input'|'textarea', location?: "inside" | "before" | "after", options?: WrappedInputLabelPairOptions): WrappedInputLabelPair{
+        let container = this.newWrap('div',undefined,location)
+        inputTag = (inputTag === undefined)? 'input' : inputTag; 
+        location = (location === undefined)? 'inside' : location;
+        let lbldInpt = new WrappedInputLabelPair(container.element,id,(<'input'|'textarea'>inputTag), options);
+        return lbldInpt;
     }
 }
 
-class WrappedInputLabelPair extends Wrapper{
-    public containerElement: HTMLDivElement;
-    public labelElement: HTMLLabelElement;
-    public inputElement: HTMLInputElement | HTMLTextAreaElement; 
-    constructor(inputId: string, labelText: string, inputDefault: string) {
-        //TODO - pick up here first
-        
+export interface WrappedInputLabelPairOptions {
+    label?: string, 
+    default?: string,
+    placehold?: string,
+    inputType?: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week",
+    contStyle?: string,
+    lblStyle?: string,
+    inputStyle?: string,
+    stacked?: boolean
+}
 
+export class WrappedInputLabelPair extends Wrapper{
+    public container: HTMLElement;
+    public label: Wrapper;
+    public input: Wrapper; 
+    constructor(container: HTMLElement, inputId: string, inputTag: "input" | "textarea" = 'input', options?: WrappedInputLabelPairOptions){
+        super('div',container);
+        this.container = this.element;
+        this.style('display:flex');
+        this.label = this.newWrap('label').attr('for',inputId).text('Input');
+        this.input = this.newWrap(inputTag,{id:inputId});
+        if(options){
+            if(options.contStyle) this.style(options.contStyle!);
+            if(options.inputStyle) this.input.style(options.inputStyle);
+            if(options.lblStyle) this.label.style(options.lblStyle);
+            if(options.label) this.label.text(options.label);
+            if(options.placehold) this.input.placehold(options.placehold);
+            if(options.default) this.input.setVal(options.default);
+            if(options.inputType) this.input.attr('type',options.inputType);
+            if(options.stacked && !options.contStyle && !options.inputStyle){
+                this.style('display:block');
+                this.input.style('width: 100%; display: block')
+            }
+        } 
     }
 }
