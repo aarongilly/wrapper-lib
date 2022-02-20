@@ -1,38 +1,64 @@
 /**
  * Options that Wrappers can be initialized with.
  */
- export interface WrapperOptions {
+export interface WrapperOptions {
     id?: string;
     name?: string;
     value?: string;
     text?: string;
     html?: string;
     style?: string;
+    bind?: WrapperObservableListMember;
 }
+
+export interface WrapperObservableListMember {
+    bindFeature: ObservableFeature;
+    toFeature: ObservableFeature;
+    ofWrapper: Wrapper;
+    xferFunc?: Function;
+}
+
+export type ObservableFeature = "text" | "value" | "style"
+export type WrapperPosition = "inside" | "before" | "after"
 
 type HTMLElementsWithValue = HTMLButtonElement | HTMLInputElement | HTMLMeterElement | HTMLLIElement | HTMLOptionElement | HTMLProgressElement | HTMLParamElement;
 
 export class Wrapper {
     public element: HTMLElement;
+    public isBoundTo: boolean; //TODO - is this useful?
+    public observedFeature?: ObservableFeature
+    public subscribers: WrapperObservableListMember[];
     constructor(tag?: keyof HTMLElementTagNameMap, existingElement?: HTMLElement, intializers?: WrapperOptions) {
+        this.isBoundTo = false;
+        this.subscribers = [];
         if (existingElement) {
             this.element = existingElement;
         } else {
             this.element = document.createElement(tag!)
         }
         if (intializers) {
-            if (intializers.hasOwnProperty('id')) this.element.id = intializers.id!;
-            if (intializers.hasOwnProperty('name')) this.element.setAttribute('name', intializers.name!);
-            if (intializers.hasOwnProperty('value')){
-                if(this.element.hasOwnProperty('value')){
+            if (intializers.id) this.element.id = intializers.id!;
+            if (intializers.name) this.element.setAttribute('name', intializers.name!);
+            if (intializers.value) {
+                if (this.element.hasOwnProperty('value')) {
                     (<HTMLElementsWithValue>this.element).value = intializers.value!;
-                }else{
+                } else {
                     throw new Error("attempted to set value on a tag that doesn't support that")
                 }
-            } 
-            if (intializers.hasOwnProperty('text')) this.element.innerText = intializers.text!;
-            if (intializers.hasOwnProperty('html')) this.element.innerHTML = intializers.html!;
-            if (intializers.hasOwnProperty('style')) this.element.setAttribute('style', intializers.style!);
+            }
+            if (intializers.text != undefined) this.element.innerText = intializers.text!;
+            if (intializers.html != undefined) this.element.innerHTML = intializers.html!;
+            if (intializers.style) this.element.setAttribute('style', intializers.style!);
+            if (intializers.bind) {
+                this.isBoundTo = true;
+                let sub: WrapperObservableListMember = {
+                    bindFeature: intializers.bind.bindFeature,
+                    toFeature: intializers.bind.toFeature,
+                    ofWrapper: this,
+                    xferFunc: intializers.bind.xferFunc
+                }
+                intializers.bind.ofWrapper.addSubscriber(sub);//this feels wrong
+            }
         }
     }
 
@@ -53,7 +79,7 @@ export class Wrapper {
      * @param locaitn inside appendChild(), before before(), after after()
      * @returns the new wrapper, for chaining
      */
-    newWrap = (tag: keyof HTMLElementTagNameMap, initializers?: WrapperOptions, location: "inside" | "before" | "after" = 'inside'): Wrapper => {
+    newWrap = (tag: keyof HTMLElementTagNameMap, initializers?: WrapperOptions, location: WrapperPosition = 'inside'): Wrapper => {
         let nW = new Wrapper(tag, undefined, initializers);
         if (location === 'inside') this.element.appendChild(nW.element);
         if (location === 'after') this.element.after(nW.element);
@@ -62,12 +88,60 @@ export class Wrapper {
     }
 
     /**
+     * 
+     * @param bindWhat Which part of this Wrapper should be updated
+     * @param toWhat The feature you care about on the Wrapper you're subscribing 
+     * @param ofWhat Wrapper to bind to
+     * @param using optional transfer function, default: text for non-inputs, otherwise value
+     * @returns 
+     */
+    bind = (bindWhat: ObservableFeature, toWhat: ObservableFeature, ofWhat: Wrapper, using?: Function): Wrapper => {
+        let sub: WrapperObservableListMember = {
+            bindFeature: bindWhat,
+            toFeature: toWhat,
+            ofWrapper: this,
+            xferFunc: using
+        }
+        ofWhat.addSubscriber(sub);
+        return this
+    }
+
+    notifySubscribers = () => {
+        this.subscribers.forEach(sub => {
+            let newVal = this.getText();
+            if (sub.bindFeature == 'value') newVal = this.getVal().toString();
+            if (sub.bindFeature == 'style') newVal = this.getStyle()!;
+            sub.ofWrapper.handleChange(newVal, sub)
+        })
+    }
+
+    handleChange = (newValue: string, subscription: WrapperObservableListMember): void => {
+        console.warn(newValue);
+        console.log(subscription);
+        if(subscription.toFeature === 'text') this.text(newValue);
+        if(subscription.toFeature === 'style') this.style(newValue);
+        if(subscription.toFeature === 'value') this.setVal(newValue);
+    }
+
+    /**
+     * Adds a Wrapper 
+     * @param newSub subscribing wrapper to add
+     */
+    addSubscriber = (newSub: WrapperObservableListMember): void => {
+        this.isBoundTo = true;
+        this.subscribers.push(newSub);
+    }
+
+    //removeSubscriber //todo - this
+
+    /**
      * Sets the innerText of the wrapped element.
      * @param text the text to set
      * @returns the Wrapper, for chaining
      */
     text = (text: string): Wrapper => {
         this.element.innerText = text;
+        if (this.observedFeature == "text") this.subscribers.forEach(sub => sub.ofWrapper.handleChange(text, sub));
         return this
     }
 
@@ -77,8 +151,8 @@ export class Wrapper {
      * @param value value to set it to
      * @returns the Wrapper, for chaining
      */
-    attr = (attribute: string, value: string): Wrapper =>{
-        this.element.setAttribute(attribute,value)
+    attr = (attribute: string, value: string): Wrapper => {
+        this.element.setAttribute(attribute, value)
         return this;
     }
 
@@ -98,13 +172,14 @@ export class Wrapper {
      * @param append true = append to the existing styles; false =  replace it
      * @returns the Wrapper, for chaining
      */
-    style = (styleString: string, append?: boolean): Wrapper =>{
+    style = (styleString: string, append?: boolean): Wrapper => {
         let style = "";
-        if(append && this.element.getAttribute('style')!=null){
+        if (append && this.element.getAttribute('style') != null) {
             style = this.element.getAttribute('style')!.trim();
-            if(style.charAt(style.length-1)!=";") style = style + "; "
+            if (style.charAt(style.length - 1) != ";") style = style + "; "
         }
-        this.element.setAttribute('style',style + styleString);
+        this.element.setAttribute('style', style + styleString);
+        if (this.observedFeature == "style") this.subscribers.forEach(sub => sub.ofWrapper.handleChange(styleString, sub));
         return this
     }
 
@@ -128,12 +203,11 @@ export class Wrapper {
         return this
     }
 
-    
     /**
      * Returns the value of a given attribute on the wrapped element
      * @returns the value of attribute on the element, or null if no attribute exists
      */
-     getAttr = (attribute: string): string | null =>{
+    getAttr = (attribute: string): string | null => {
         return this.element.getAttribute(attribute);
     }
 
@@ -143,15 +217,32 @@ export class Wrapper {
      * @param value the value to set
      * @returns the Wrapper, for chaining
      */
-    setAttr = (attribute: string, value: string): Wrapper =>{
+    setAttr = (attribute: string, value: string): Wrapper => {
         return this.attr(attribute, value);
+    }
+
+    /**
+     * Returns the style string of a given attribute on the wrapped element
+     * @returns the style string of attribute on the element, or null if no attribute exists
+     */
+    getStyle = (): string | null => {
+        return this.element.getAttribute('style');
+    }
+
+    /**
+     * Simple alias for {@link style}.
+     * @param styleString the value to set
+     * @returns the Wrapper, for chaining
+     */
+    setStyle = (styleString: string): Wrapper => {
+        return this.style(styleString);
     }
 
     /**
      * Returns the innerText of the wrapped element
      * @returns the innerText of the wrapped element
      */
-     getText= (): string =>{
+    getText = (): string => {
         return this.element.innerText;
     }
 
@@ -160,7 +251,7 @@ export class Wrapper {
      * @param text string to set
      * @returns the Wrapper, for chaining
      */
-    setText = (text: string): Wrapper =>{
+    setText = (text: string): Wrapper => {
         return this.text(text);
     }
 
@@ -170,7 +261,7 @@ export class Wrapper {
      * @returns the value of the wrapped element
      */
     getVal = () => {
-        if(this.element.tagName == 'INPUT' && this.getAttr('type') == "checkbox") return (<HTMLInputElement>this.element).checked;        
+        if (this.element.tagName == 'INPUT' && this.getAttr('type') == "checkbox") return (<HTMLInputElement>this.element).checked;
         return (<HTMLInputElement>this.element).value //inline type assertion IS possible
     }
 
@@ -178,9 +269,10 @@ export class Wrapper {
      * Sets the value of Wrapped things like inputs, textareas
      * @returns the Wrapper, for chaining
      */
-    setVal = (val: string) =>{
+    setVal = (val: string) => {
         (<HTMLInputElement | HTMLParamElement | HTMLButtonElement |
-             HTMLOptionElement | HTMLLIElement>this.element).value = val;
+            HTMLOptionElement | HTMLLIElement>this.element).value = val;
+        if (this.observedFeature == "value") this.subscribers.forEach(sub => sub.ofWrapper.handleChange(val, sub));
         return this;
     }
 
@@ -237,7 +329,7 @@ export class Wrapper {
                 throw new Error('textList and idList not the same length');
             }
             textList.forEach((text, ind) => {
-                this.newWrap('li',{'id': idList[ind]}).text(text);
+                this.newWrap('li', { 'id': idList[ind] }).text(text);
             })
         } else {
             textList.forEach((text, ind) => {
@@ -257,7 +349,7 @@ export class Wrapper {
      * @returns the Wrapper, for chaining
      */
     selectContent(textList: string[], valList?: string[], idList?: string[]) {
-        if(!valList) valList = textList;
+        if (!valList) valList = textList;
         if (textList.length != valList.length) {
             console.error({ 'not the same length': textList, 'as': valList });
             throw new Error('textList and idList not the same length');
@@ -268,7 +360,7 @@ export class Wrapper {
                 throw new Error('textList and idList not the same length');
             }
             textList.forEach((text, ind) => {
-                this.newWrap('option', {id:idList[ind]}).text(text).setVal(valList![ind]);
+                this.newWrap('option', { id: idList[ind] }).text(text).setVal(valList![ind]);
             })
         } else {
             textList.forEach((text, ind) => {
@@ -285,17 +377,17 @@ export class Wrapper {
      * @param location where the labeled input should be in relation to its caller
      * @returns the Wrapper (for the outer div)
      */
-    makeLabeledInput(id: string, inputTag?: 'input'|'textarea', location?: "inside" | "before" | "after", options?: WrappedInputLabelPairOptions): WrappedInputLabelPair{
-        let container = this.newWrap('div',undefined,location)
-        inputTag = (inputTag === undefined)? 'input' : inputTag; 
-        location = (location === undefined)? 'inside' : location;
-        let lbldInpt = new WrappedInputLabelPair(container.element,id,(<'input'|'textarea'>inputTag), options);
+    makeLabeledInput(id: string, inputTag?: 'input' | 'textarea', location?: WrapperPosition, options?: WrappedInputLabelPairOptions): WrappedInputLabelPair {
+        let container = this.newWrap('div', undefined, location)
+        inputTag = (inputTag === undefined) ? 'input' : inputTag;
+        location = (location === undefined) ? 'inside' : location;
+        let lbldInpt = new WrappedInputLabelPair(container.element, id, (<'input' | 'textarea'>inputTag), options);
         return lbldInpt;
     }
 }
 
 export interface WrappedInputLabelPairOptions {
-    label?: string, 
+    label?: string,
     default?: string,
     placehold?: string,
     inputType?: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week",
@@ -305,28 +397,28 @@ export interface WrappedInputLabelPairOptions {
     stacked?: boolean
 }
 
-export class WrappedInputLabelPair extends Wrapper{
+export class WrappedInputLabelPair extends Wrapper {
     public container: HTMLElement;
     public label: Wrapper;
-    public input: Wrapper; 
-    constructor(container: HTMLElement, inputId: string, inputTag: "input" | "textarea" = 'input', options?: WrappedInputLabelPairOptions){
-        super('div',container);
+    public input: Wrapper;
+    constructor(container: HTMLElement, inputId: string, inputTag: "input" | "textarea" = 'input', options?: WrappedInputLabelPairOptions) {
+        super('div', container);
         this.container = this.element;
         this.style('display:flex');
-        this.label = this.newWrap('label').attr('for',inputId).text('Input');
-        this.input = this.newWrap(inputTag,{id:inputId});
-        if(options){
-            if(options.contStyle) this.style(options.contStyle!);
-            if(options.inputStyle) this.input.style(options.inputStyle);
-            if(options.lblStyle) this.label.style(options.lblStyle);
-            if(options.label) this.label.text(options.label);
-            if(options.placehold) this.input.placehold(options.placehold);
-            if(options.default) this.input.setVal(options.default);
-            if(options.inputType) this.input.attr('type',options.inputType);
-            if(options.stacked && !options.contStyle && !options.inputStyle){
+        this.label = this.newWrap('label').attr('for', inputId).text('Input');
+        this.input = this.newWrap(inputTag, { id: inputId });
+        if (options) {
+            if (options.contStyle) this.style(options.contStyle!);
+            if (options.inputStyle) this.input.style(options.inputStyle);
+            if (options.lblStyle) this.label.style(options.lblStyle);
+            if (options.label) this.label.text(options.label);
+            if (options.placehold) this.input.placehold(options.placehold);
+            if (options.default) this.input.setVal(options.default);
+            if (options.inputType) this.input.attr('type', options.inputType);
+            if (options.stacked && !options.contStyle && !options.inputStyle) {
                 this.style('display:block');
                 this.input.style('width: 100%; display: block')
             }
-        } 
+        }
     }
 }

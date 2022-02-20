@@ -1,5 +1,5 @@
 import './style.css'
-import { Wrapper, WrappedInputLabelPair} from './wrapper'
+import { Wrapper } from './wrapper'
 
 const app = Wrapper.wrap(document.querySelector<HTMLDivElement>('#app')!);
 app.newWrap('h1',{text: 'Wrapper Library Test Page'});
@@ -41,7 +41,10 @@ checkPair.input.onEvent('click',()=>{
 let datePair = grid.makeLabeledInput('date-input',undefined,undefined,{inputType:'date',lblStyle: "margin-right: 0.5em"});
 //#endregion
 
-//todo - databinding
 let bindingSection = app.newWrap('section',{html:"<h1>Data Binding Example</h1>"});
-let bindingSelect = bindingSection.newWrap('select').selectContent(['Option 1', "Option 2", "Option 3"])
+let bindingInput = bindingSection.newWrap('input');
+bindingInput.onEvent('input',()=>bindingInput.notifySubscribers())
+// let bindingSelect = bindingSection.newWrap('select').selectContent(['Option 1', "Option 2", "Option 3"])
 let boundParagraph = bindingSection.newWrap('p',{text: "Coming soon..."}).style('color: red');
+boundParagraph.bind('value','text',bindingInput);
+//todo - test other binding configurations
