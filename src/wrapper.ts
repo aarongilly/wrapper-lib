@@ -18,12 +18,12 @@ export interface WrapperObservableListMember {
     xferFunc?: Function;
 }
 
-export interface WrapperlessObservableListMember{
+export interface WrapperlessObservableListMember {
     xferFunc: Function;
     sub: WrapperlessObserver;
 }
 
-export interface WrapperlessObserver{
+export interface WrapperlessObserver {
     handleChange: Function;
 }
 
@@ -108,6 +108,24 @@ export class Wrapper {
     }
 
     /**
+     * Binds the Wrapper to a WrapperlessObservable instance. If you want to bind between
+     * wrappers, use the bindToWrapper method.
+     * @param target observerable to bind to
+     * @param boundFeature feature on this Wrapper to change, not used if xferFunc is supplied
+     * @param xferFunc optional, what to do with the new value, overrides boundFeature
+     */
+    bindTo(target: WrapperlessObservable, boundFeature?: ObservableFeature, xferFunc?: Function) {
+        if (xferFunc != undefined) {
+            target.addSubscriber(this, xferFunc);
+        } else {
+            if (boundFeature == undefined) throw new Error("No bound feature or xferFunc included.");
+            if (boundFeature == 'text') target.addSubscriber(this, (nv: string) => this.text(nv));
+            if (boundFeature == 'value') target.addSubscriber(this, (nv: string) => this.setVal(nv));
+            if (boundFeature == 'style') target.addSubscriber(this, (nv: string) => this.style(nv));
+        }
+    }
+
+    /**
      * Bind this wrapper's text/style/value to the text/style/value of the targetWrapper
      * @param targetWrapper Wrapper to bind to
      * @param targetFeature The feature you care about on the Wrapper you're subscribing 
@@ -150,15 +168,19 @@ export class Wrapper {
      * Updates this wrapper with the new value from the WrapperObservable that called it,
      * in accordance with the terms of the subscription.
      * @param newValue the new value from the thing
-     * @param subscription the subscription itself
+     * @param subscription the subscription itself, or the function to run
      */
-    handleChange(newValue: string, subscription: WrapperObservableListMember): void {
-        if (subscription.xferFunc) {
-            subscription.xferFunc(newValue);
+    handleChange(newValue: string, subscription: WrapperObservableListMember | Function): void {
+        if (typeof subscription === 'function') {
+            subscription(newValue);
         } else {
-            if (subscription.toFeature === 'text') this.text(newValue);
-            if (subscription.toFeature === 'style') this.style(newValue);
-            if (subscription.toFeature === 'value') this.setVal(newValue);
+            if (subscription.xferFunc) {
+                subscription.xferFunc(newValue);
+            } else {
+                if (subscription.toFeature === 'text') this.text(newValue);
+                if (subscription.toFeature === 'style') this.style(newValue);
+                if (subscription.toFeature === 'value') this.setVal(newValue);
+            }
         }
     }
 
@@ -416,7 +438,7 @@ export class Wrapper {
                 this.newWrap('li', { 'id': idList[ind] }).text(text);
             })
         } else {
-            textList.forEach((text, ind) => {
+            textList.forEach((text) => {
                 this.newWrap('li').text(text);
             })
         }
@@ -470,44 +492,102 @@ export class Wrapper {
     }
 }
 
-// export class WrapperlessObservable {
-//     private value: string | number | boolean;
-//     subscribers: WrapperlessObservableListMember[]
-//     constructor(initVal: string | number | boolean) {
-//         this.value = initVal;
-//         this.subscribers = [];
-//     }
+export class WrapperlessObservable {
+    private value: string | number | boolean;
+    subscribers: WrapperlessObservableListMember[]
+    constructor(initVal: string | number | boolean) {
+        this.value = initVal;
+        this.subscribers = [];
+    }
 
-//     /**
-//      * Simple value getter
-//      * @returns the observed value
-//      */
-//     getVal() {
-//         return this.value;
-//     }
+    /**
+     * Simple value getter
+     * @returns the observed value
+     */
+    getVal() {
+        return this.value;
+    }
 
-//     /**
-//      * Value setter, notifies subscribers of change
-//      * @param newValue the new value for the observable
-//      */
-//     setVal(newValue: string | number | boolean) {
-//         this.value = newValue;
-//     }
+    /**
+     * Value setter, notifies subscribers of change
+     * @param newValue the new value for the observable
+     */
+    setVal(newValue: string | number | boolean) {
+        this.value = newValue;
+        this.notifySubscribers();
+    }
 
-//     addSubscriber(newSub: WrapperlessObserver, xferFunc: Function){
-//         this.subscribers.push({sub: newSub, xferFunc: xferFunc})
-//     }
+    addSubscriber(newSub: WrapperlessObserver, xferFunc: Function) {
+        this.subscribers.push({ sub: newSub, xferFunc: xferFunc })
+    }
 
-//     /**
-//      * Propogate out a request to handle change to every entry in the subscriber list
-//      * @returns this, for chaining
-//      */
-//     notifySubscribers() {
-//         this.subscribers.forEach(m => {
-//             m.sub.handleChange(this.value)
-//         })
-//     }
-// }
+    /**
+     * Propogate out a request to handle change to every entry in the subscriber list
+     * @returns this, for chaining
+     */
+    notifySubscribers() {
+        this.subscribers.forEach(m => {
+            m.sub.handleChange(this.value, m.xferFunc)
+        })
+    }
+}
+
+export class Observer implements WrapperlessObserver {
+    value: string | number | boolean
+    constructor(init: string | number | boolean) {
+        this.value = init
+    }
+
+    /**
+        * Binds the Wrapper to a WrapperlessObservable instance. If you want to bind between
+        * wrappers, use the bindToWrapper method.
+        * @param target observerable to bind to
+        * @param boundFeature feature on this Wrapper to change, not used if xferFunc is supplied
+        * @param xferFunc optional, what to do with the new value, overrides boundFeature
+        * @returns this, for chaining
+        */
+    bindTo(target: WrapperlessObservable, xferFunc?: Function) {
+        if (xferFunc != undefined) {
+            target.addSubscriber(this, xferFunc);
+        } else {
+            target.addSubscriber(this, (nv: string | number | boolean) => { this.value = nv });
+        }
+        return this;
+    }
+
+    /**
+     * Bind this wrapper's text/style/value to the text/style/value of the targetWrapper
+     * @param targetWrapper Wrapper to bind to
+     * @param targetFeature The feature you care about on the Wrapper you're subscribing 
+     * @param thisFeature Which part of this Wrapper should be updated
+     * @param using optional transfer function, default: text for non-inputs, otherwise value
+     * @returns this, for chaining
+     */
+    bindToWrapper(targetWrapper: Wrapper, targetFeature: ObservableFeature, using?: Function): Observer {
+        if (using == undefined) using = (nv: string | number | boolean) => { return nv };
+        let sub: WrapperObservableListMember = {
+            toFeature: 'text',
+            bindFeature: targetFeature,
+            ofWrapper: targetWrapper, //hack - this isn't used in this context, but must exist
+            xferFunc: using
+        }
+        targetWrapper.addSubscriber(sub);
+        //initilize bound value to whatever it is now
+        let currentVal: string | number | boolean = targetWrapper.getText();
+        if (sub.bindFeature === 'style' && targetWrapper.getStyle() != null) currentVal = targetWrapper.getStyle()!;
+        if (sub.bindFeature === 'value') currentVal = targetWrapper.getVal();
+        this.handleChange(currentVal, using)
+        return this
+    }
+
+    /**
+     * Called by Observables when they are triggered by changes
+     * @param newVal the value to set
+     */
+    handleChange(newVal: string | number | boolean, doFun: Function) {
+        this.value = doFun(newVal);
+    }
+}
 
 export class WrappedInputLabelPair extends Wrapper {
     public container: HTMLElement;

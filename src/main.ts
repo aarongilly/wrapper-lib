@@ -1,5 +1,5 @@
 import './style.css'
-import { Wrapper, WrapperlessObservable } from './wrapper'
+import { Observer, Wrapper, WrapperlessObservable } from './wrapper'
 
 const app = Wrapper.wrap(document.querySelector<HTMLDivElement>('#app')!);
 app.newWrap('h1',{text: 'Wrapper Library Test Page'});
@@ -42,24 +42,40 @@ checkPair.input.onEvent('click',()=>{
 let datePair = grid.makeLabeledInput('date-input',undefined,undefined,{inputType:'date',lbl: "Date Input",lblStyle: "margin-right: 0.5em"});
 //#endregion
 
+//#region #### Binding to Variables ####
+let genericBindingSection = app.newWrap('section',{html:"<h1>Generic Data Binding</h1>"});
+genericBindingSection.newWrap('h2').text('Bound Wrapper to WrapperlessObservable')
+let boundToVar = new WrapperlessObservable(5);
+genericBindingSection.newWrap('p').text(boundToVar.getVal().toString()).bindTo(boundToVar,"text");
+genericBindingSection.newWrap('button').text("Increment").onClick(()=>{ boundToVar.setVal(<number>boundToVar.getVal()+1)});
+genericBindingSection.newWrap('h2').text('Observer Watching the Observable From Above');
+let boundVarView = genericBindingSection.newWrap('p').text('Double the number above: 10')
+let boundVar = new Observer(boundToVar.getVal()).bindTo(boundToVar,(nv: number)=> {
+  boundVarView.text('Double the number above: ' + nv*2) //for illustration only
+  return nv*2
+});
+genericBindingSection.newWrap('h2').text("Observer of Wrappers");
+let inputToBindAgainst = genericBindingSection.newWrap('input').placehold('Enter some text')
+let wrapperBondVarView = genericBindingSection.newWrap('p').text("Input value: ");
+new Observer('whatever').bindToWrapper(inputToBindAgainst,'value',(nv: string)=>{
+  wrapperBondVarView.text("Input value: " + nv)
+  return nv;
+})
+//#endregion
+
 //#region #### Inter-Wrappter Data Binding Region ####
-let bindingSection = app.newWrap('section',{html:"<h1>Inter-Wrapper Binding Example</h1>"});
-bindingSection.newWrap('h2').text('Bound Select, with Binding Breaker Demo')
-let bindingSelect = bindingSection.newWrap('select').selectContent(['1', "2", "3"],["You picked one", "You picked two", "You picked three"]);
-let boundToSelect = bindingSection.newWrap('p').bindToWrapper(bindingSelect,'value','text');
-bindingSection.newWrap('button',{text:'Break Binding'}).onEvent('click',()=>{
+let wrapperBindingSection = app.newWrap('section',{html:"<h1>Inter-Wrapper Binding Example</h1>"});
+wrapperBindingSection.newWrap('h2').text('Bound Select, with Binding Breaker Demo')
+let bindingSelect = wrapperBindingSection.newWrap('select').selectContent(['1', "2", "3"],["You picked one", "You picked two", "You picked three"]);
+let boundToSelect = wrapperBindingSection.newWrap('p').bindToWrapper(bindingSelect,'value','text');
+wrapperBindingSection.newWrap('button',{text:'Break Binding'}).onEvent('click',()=>{
   bindingSelect.removeSubscriber(boundToSelect);
   boundToSelect.text('Binding broken, this will no longer update.');
 }).style('margin-right: 0.5em')
-bindingSection.newWrap('button',{text: 'Re-bind'}).onEvent('click',()=>boundToSelect.bindToWrapper(bindingSelect,'value','text'));
-bindingSection.newWrap('h2',{text:"Binding Text & Style (via xferFunc)"})
-let boundText = bindingSection.newWrap('p',{text: "Enter some text below and watch me change..."});
-let bindingInput = bindingSection.newWrap('input').setVal('Enter a Color name!').placehold('Type a color name...');
+wrapperBindingSection.newWrap('button',{text: 'Re-bind'}).onEvent('click',()=>boundToSelect.bindToWrapper(bindingSelect,'value','text'));
+wrapperBindingSection.newWrap('h2',{text:"Binding Text & Style (via xferFunc)"})
+let boundText = wrapperBindingSection.newWrap('p',{text: "Enter some text below and watch me change..."});
+let bindingInput = wrapperBindingSection.newWrap('input').setVal('Enter a Color name!').placehold('Type a color name...');
 boundText.bindToWrapper(bindingInput,'value','text')
   .bindToWrapper(bindingInput,'value','style',(newVal: string)=>{boundText.style('color:' + newVal)});
 //#endregion
-
-//#region #### Binding to Variables ####
-// let altBinding = app.newWrap('section',{html:"<h1>Generic Data Binding</h1>"});
-// let test = new WrapperlessObservable(5);
-// altBinding.newWrap('p').text(test.getVal().toString())//.//bindTo()
