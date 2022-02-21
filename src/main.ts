@@ -1,5 +1,5 @@
 import './style.css'
-import { Wrapper } from './wrapper'
+import { Wrapper, WrapperlessObservable } from './wrapper'
 
 const app = Wrapper.wrap(document.querySelector<HTMLDivElement>('#app')!);
 app.newWrap('h1',{text: 'Wrapper Library Test Page'});
@@ -14,9 +14,10 @@ simpleSection.newWrap('button',{text: 'Check again'}).onEvent('click',()=>{
 //#endregion
 
 //#region #### Composite Example ####
-let compositeSection = app.newWrap('section')
-let features = ['Supports Chaining', 'Concise(er) syntax', 'Data binding (soon)', 'Component-ish things'];
-compositeSection.newWrap('h1',{text: "Composite Example"}).newWrap('ul',{style: 'list-style-type: upper-roman'},'after').listContent(features);
+let compositeSection = app.newWrap('section').newWrap('h1',{text: "Composite Examples"}).newWrap('div',{style: 'display: grid; grid-column-layout: 1fr 1fr'},'after')
+let features = ['Supports Chaining', 'Concise(er) syntax', 'Basic data binding', 'Component-ish things'];
+compositeSection.newWrap('div',{style:"grid-column-start:1"}).newWrap('h2',{text: "Create Lists from Arrays"}).newWrap('ul',undefined,'after').listContent(features);
+compositeSection.newWrap('div',{style:"grid-column-start:2"}).newWrap('h2',{text: "Create Selects from Arrays"}).newWrap('select',undefined,'after').selectContent(features);
 //#endregion
 
 //#region #### Labeled Input Examples ####
@@ -29,7 +30,7 @@ let textareaPair = lbldInptSection.makeLabeledInput('textarea-example','textarea
 textareaPair.label.style('margin-right: 0.5em');
 lbldInptSection.newWrap('h2').text("Other Types of Inputs")
 let grid = lbldInptSection.newWrap('div').style('display: grid; grid-template-columns: 1fr 1fr');
-let checkPair = grid.makeLabeledInput('check-input','input','inside',{inputType:'checkbox', label: "Show Date Example, too?"});
+let checkPair = grid.makeLabeledInput('check-input','input','inside',{inputType:'checkbox', lbl: "Show Date Example, too?"});
 (<HTMLInputElement>checkPair.input.element).checked = true;
 checkPair.input.onEvent('click',()=>{
   if(checkPair.input.getVal()){
@@ -38,13 +39,27 @@ checkPair.input.onEvent('click',()=>{
     datePair.style('display:none')
   }
 })
-let datePair = grid.makeLabeledInput('date-input',undefined,undefined,{inputType:'date',lblStyle: "margin-right: 0.5em"});
+let datePair = grid.makeLabeledInput('date-input',undefined,undefined,{inputType:'date',lbl: "Date Input",lblStyle: "margin-right: 0.5em"});
 //#endregion
 
-let bindingSection = app.newWrap('section',{html:"<h1>Data Binding Example</h1>"});
-let bindingInput = bindingSection.newWrap('input');
-bindingInput.onEvent('input',()=>bindingInput.notifySubscribers())
-// let bindingSelect = bindingSection.newWrap('select').selectContent(['Option 1', "Option 2", "Option 3"])
-let boundParagraph = bindingSection.newWrap('p',{text: "Coming soon..."}).style('color: red');
-boundParagraph.bind('value','text',bindingInput);
-//todo - test other binding configurations
+//#region #### Inter-Wrappter Data Binding Region ####
+let bindingSection = app.newWrap('section',{html:"<h1>Inter-Wrapper Binding Example</h1>"});
+bindingSection.newWrap('h2').text('Bound Select, with Binding Breaker Demo')
+let bindingSelect = bindingSection.newWrap('select').selectContent(['1', "2", "3"],["You picked one", "You picked two", "You picked three"]);
+let boundToSelect = bindingSection.newWrap('p').bindToWrapper(bindingSelect,'value','text');
+bindingSection.newWrap('button',{text:'Break Binding'}).onEvent('click',()=>{
+  bindingSelect.removeSubscriber(boundToSelect);
+  boundToSelect.text('Binding broken, this will no longer update.');
+}).style('margin-right: 0.5em')
+bindingSection.newWrap('button',{text: 'Re-bind'}).onEvent('click',()=>boundToSelect.bindToWrapper(bindingSelect,'value','text'));
+bindingSection.newWrap('h2',{text:"Binding Text & Style (via xferFunc)"})
+let boundText = bindingSection.newWrap('p',{text: "Enter some text below and watch me change..."});
+let bindingInput = bindingSection.newWrap('input').setVal('Enter a Color name!').placehold('Type a color name...');
+boundText.bindToWrapper(bindingInput,'value','text')
+  .bindToWrapper(bindingInput,'value','style',(newVal: string)=>{boundText.style('color:' + newVal)});
+//#endregion
+
+//#region #### Binding to Variables ####
+// let altBinding = app.newWrap('section',{html:"<h1>Generic Data Binding</h1>"});
+// let test = new WrapperlessObservable(5);
+// altBinding.newWrap('p').text(test.getVal().toString())//.//bindTo()

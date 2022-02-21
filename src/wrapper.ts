@@ -18,6 +18,26 @@ export interface WrapperObservableListMember {
     xferFunc?: Function;
 }
 
+export interface WrapperlessObservableListMember{
+    xferFunc: Function;
+    sub: WrapperlessObserver;
+}
+
+export interface WrapperlessObserver{
+    handleChange: Function;
+}
+
+export interface WrappedInputLabelPairOptions {
+    lbl?: string,
+    default?: string,
+    placehold?: string,
+    inputType?: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week",
+    contStyle?: string,
+    lblStyle?: string,
+    inputStyle?: string,
+    stacked?: boolean
+}
+
 export type ObservableFeature = "text" | "value" | "style"
 export type WrapperPosition = "inside" | "before" | "after"
 
@@ -25,17 +45,18 @@ type HTMLElementsWithValue = HTMLButtonElement | HTMLInputElement | HTMLMeterEle
 
 export class Wrapper {
     public element: HTMLElement;
-    public isBoundTo: boolean; //TODO - is this useful?
-    public observedFeature?: ObservableFeature
     public subscribers: WrapperObservableListMember[];
     constructor(tag?: keyof HTMLElementTagNameMap, existingElement?: HTMLElement, intializers?: WrapperOptions) {
-        this.isBoundTo = false;
         this.subscribers = [];
         if (existingElement) {
             this.element = existingElement;
         } else {
             this.element = document.createElement(tag!)
         }
+        //auto-call notify subscribers if inputs change
+        if (this.element.tagName === "INPUT") this.onEvent('input', this.notifySubscribers.bind(this));
+        if (this.element.tagName === "SELECT") this.onEvent('change', this.notifySubscribers.bind(this));
+        if (this.element.tagName === "TEXTAREA") this.onEvent('input', this.notifySubscribers.bind(this));
         if (intializers) {
             if (intializers.id) this.element.id = intializers.id!;
             if (intializers.name) this.element.setAttribute('name', intializers.name!);
@@ -50,7 +71,6 @@ export class Wrapper {
             if (intializers.html != undefined) this.element.innerHTML = intializers.html!;
             if (intializers.style) this.element.setAttribute('style', intializers.style!);
             if (intializers.bind) {
-                this.isBoundTo = true;
                 let sub: WrapperObservableListMember = {
                     bindFeature: intializers.bind.bindFeature,
                     toFeature: intializers.bind.toFeature,
@@ -67,7 +87,7 @@ export class Wrapper {
      * @param element the element to wrap
      * @returns the new wrapper, for chaining
      */
-    static wrap = (element: HTMLElement, initializers?: WrapperOptions): Wrapper => {
+    static wrap(element: HTMLElement, initializers?: WrapperOptions): Wrapper {
         return new Wrapper((<keyof HTMLElementTagNameMap>element.tagName), element, initializers);
     }
 
@@ -79,7 +99,7 @@ export class Wrapper {
      * @param locaitn inside appendChild(), before before(), after after()
      * @returns the new wrapper, for chaining
      */
-    newWrap = (tag: keyof HTMLElementTagNameMap, initializers?: WrapperOptions, location: WrapperPosition = 'inside'): Wrapper => {
+    newWrap(tag: keyof HTMLElementTagNameMap, initializers?: WrapperOptions, location: WrapperPosition = 'inside'): Wrapper {
         let nW = new Wrapper(tag, undefined, initializers);
         if (location === 'inside') this.element.appendChild(nW.element);
         if (location === 'after') this.element.after(nW.element);
@@ -88,60 +108,94 @@ export class Wrapper {
     }
 
     /**
-     * 
-     * @param bindWhat Which part of this Wrapper should be updated
-     * @param toWhat The feature you care about on the Wrapper you're subscribing 
-     * @param ofWhat Wrapper to bind to
+     * Bind this wrapper's text/style/value to the text/style/value of the targetWrapper
+     * @param targetWrapper Wrapper to bind to
+     * @param targetFeature The feature you care about on the Wrapper you're subscribing 
+     * @param thisFeature Which part of this Wrapper should be updated
      * @param using optional transfer function, default: text for non-inputs, otherwise value
-     * @returns 
+     * @returns this, for chaining
      */
-    bind = (bindWhat: ObservableFeature, toWhat: ObservableFeature, ofWhat: Wrapper, using?: Function): Wrapper => {
+    bindToWrapper(targetWrapper: Wrapper, targetFeature: ObservableFeature, thisFeature: ObservableFeature, using?: Function): Wrapper {
         let sub: WrapperObservableListMember = {
-            bindFeature: bindWhat,
-            toFeature: toWhat,
+            bindFeature: targetFeature,
+            toFeature: thisFeature,
             ofWrapper: this,
             xferFunc: using
         }
-        ofWhat.addSubscriber(sub);
+        targetWrapper.addSubscriber(sub);
+        //initilize bound value to whatever it is now
+        let currentVal = targetWrapper.getText();
+        if (sub.bindFeature === 'style' && targetWrapper.getStyle() != null) currentVal = targetWrapper.getStyle()!;
+        if (sub.bindFeature === 'value') currentVal = targetWrapper.getVal().toString();
+        this.handleChange(currentVal, sub)
         return this
     }
 
-    notifySubscribers = () => {
+    /**
+     * Propogate out a request to handle change to every entry in the subscriber list
+     * @returns this, for chaining
+     */
+    notifySubscribers(): Wrapper {
+        // console.warn
         this.subscribers.forEach(sub => {
             let newVal = this.getText();
             if (sub.bindFeature == 'value') newVal = this.getVal().toString();
             if (sub.bindFeature == 'style') newVal = this.getStyle()!;
             sub.ofWrapper.handleChange(newVal, sub)
         })
-    }
-
-    handleChange = (newValue: string, subscription: WrapperObservableListMember): void => {
-        console.warn(newValue);
-        console.log(subscription);
-        if(subscription.toFeature === 'text') this.text(newValue);
-        if(subscription.toFeature === 'style') this.style(newValue);
-        if(subscription.toFeature === 'value') this.setVal(newValue);
+        return this;
     }
 
     /**
-     * Adds a Wrapper 
-     * @param newSub subscribing wrapper to add
+     * Updates this wrapper with the new value from the WrapperObservable that called it,
+     * in accordance with the terms of the subscription.
+     * @param newValue the new value from the thing
+     * @param subscription the subscription itself
      */
-    addSubscriber = (newSub: WrapperObservableListMember): void => {
-        this.isBoundTo = true;
+    handleChange(newValue: string, subscription: WrapperObservableListMember): void {
+        if (subscription.xferFunc) {
+            subscription.xferFunc(newValue);
+        } else {
+            if (subscription.toFeature === 'text') this.text(newValue);
+            if (subscription.toFeature === 'style') this.style(newValue);
+            if (subscription.toFeature === 'value') this.setVal(newValue);
+        }
+    }
+
+    /**
+     * Adds a new subscriber, which contains a subscribing wrapper and
+     * details about how it should be updated on changes to this.
+     * @param newSub subscribing wrapper to add
+     * @returns this, for chaining
+     */
+    addSubscriber(newSub: WrapperObservableListMember): Wrapper {
         this.subscribers.push(newSub);
+        return this;
     }
 
     //removeSubscriber //todo - this
+    removeSubscriber(subbedWrapper: Wrapper): Wrapper {
+        this.subscribers = this.subscribers.filter(sub => sub.ofWrapper != subbedWrapper)
+        return this;
+    }
+
+    /**
+     * Removes all subscribers from the list.
+     * @returns this, for chaining
+     */
+    purgeSubscribers() {
+        this.subscribers = [];
+        return this
+    }
 
     /**
      * Sets the innerText of the wrapped element.
      * @param text the text to set
-     * @returns the Wrapper, for chaining
+     * @returns this, for chaining
      */
-    text = (text: string): Wrapper => {
+    text(text: string): Wrapper {
         this.element.innerText = text;
-        if (this.observedFeature == "text") this.subscribers.forEach(sub => sub.ofWrapper.handleChange(text, sub));
+        this.subscribers.forEach(sub => { if (sub.bindFeature == 'text') sub.ofWrapper.handleChange(text, sub) });
         return this
     }
 
@@ -149,9 +203,9 @@ export class Wrapper {
      * Chainable horthand for this.element.setAttribute(attribute, value)
      * @param attribute attribute to set
      * @param value value to set it to
-     * @returns the Wrapper, for chaining
+     * @returns this, for chaining
      */
-    attr = (attribute: string, value: string): Wrapper => {
+    attr(attribute: string, value: string): Wrapper {
         this.element.setAttribute(attribute, value)
         return this;
     }
@@ -159,9 +213,9 @@ export class Wrapper {
     /**
      * Sets the innerHTML of the wrapped element.
      * @param html the text to set
-     * @returns the Wrapper, for chaining
+     * @returns this, for chaining
      */
-    html = (html: string): Wrapper => {
+    html(html: string): Wrapper {
         this.element.innerHTML = html;
         return this
     }
@@ -170,25 +224,25 @@ export class Wrapper {
      * Sets the `style` attribute of the wrapped element
      * @param styleString string literal for css styles
      * @param append true = append to the existing styles; false =  replace it
-     * @returns the Wrapper, for chaining
+     * @returns this, for chaining
      */
-    style = (styleString: string, append?: boolean): Wrapper => {
+    style(styleString: string, append?: boolean): Wrapper {
         let style = "";
         if (append && this.element.getAttribute('style') != null) {
             style = this.element.getAttribute('style')!.trim();
             if (style.charAt(style.length - 1) != ";") style = style + "; "
         }
         this.element.setAttribute('style', style + styleString);
-        if (this.observedFeature == "style") this.subscribers.forEach(sub => sub.ofWrapper.handleChange(styleString, sub));
+        this.subscribers.forEach(sub => { if (sub.bindFeature === 'style') sub.ofWrapper.handleChange(styleString, sub) });
         return this
     }
 
     /**
      * Sets the name of the wrapped element.
      * @param name the text to set
-     * @returns the Wrapper, for chaining
+     * @returns this, for chaining
      */
-    name = (name: string): Wrapper => {
+    name(name: string): Wrapper {
         this.element.setAttribute('name', name);
         return this
     }
@@ -196,9 +250,9 @@ export class Wrapper {
     /**
      * Sets the placeholder of the wrapped element.
      * @param placeholder the text to set
-     * @returns the Wrapper, for chaining
+     * @returns this, for chaining
      */
-    placehold = (placeholder: string): Wrapper => {
+    placehold(placeholder: string): Wrapper {
         this.element.setAttribute('placeholder', placeholder);
         return this
     }
@@ -207,7 +261,7 @@ export class Wrapper {
      * Returns the value of a given attribute on the wrapped element
      * @returns the value of attribute on the element, or null if no attribute exists
      */
-    getAttr = (attribute: string): string | null => {
+    getAttr(attribute: string): string | null {
         return this.element.getAttribute(attribute);
     }
 
@@ -215,9 +269,9 @@ export class Wrapper {
      * Simple alias for {@link attr}.
      * @param attribute attribute name to set
      * @param value the value to set
-     * @returns the Wrapper, for chaining
+     * @returns this, for chaining
      */
-    setAttr = (attribute: string, value: string): Wrapper => {
+    setAttr(attribute: string, value: string): Wrapper {
         return this.attr(attribute, value);
     }
 
@@ -225,16 +279,16 @@ export class Wrapper {
      * Returns the style string of a given attribute on the wrapped element
      * @returns the style string of attribute on the element, or null if no attribute exists
      */
-    getStyle = (): string | null => {
+    getStyle(): string | null {
         return this.element.getAttribute('style');
     }
 
     /**
      * Simple alias for {@link style}.
      * @param styleString the value to set
-     * @returns the Wrapper, for chaining
+     * @returns this, for chaining
      */
-    setStyle = (styleString: string): Wrapper => {
+    setStyle(styleString: string): Wrapper {
         return this.style(styleString);
     }
 
@@ -242,16 +296,16 @@ export class Wrapper {
      * Returns the innerText of the wrapped element
      * @returns the innerText of the wrapped element
      */
-    getText = (): string => {
+    getText(): string {
         return this.element.innerText;
     }
 
     /**
      * Simple alias for {@link text}.
      * @param text string to set
-     * @returns the Wrapper, for chaining
+     * @returns this, for chaining
      */
-    setText = (text: string): Wrapper => {
+    setText(text: string): Wrapper {
         return this.text(text);
     }
 
@@ -260,19 +314,19 @@ export class Wrapper {
      * Gets the value of Wrapped things like inputs, textareas
      * @returns the value of the wrapped element
      */
-    getVal = () => {
+    getVal() {
         if (this.element.tagName == 'INPUT' && this.getAttr('type') == "checkbox") return (<HTMLInputElement>this.element).checked;
         return (<HTMLInputElement>this.element).value //inline type assertion IS possible
     }
 
     /**
      * Sets the value of Wrapped things like inputs, textareas
-     * @returns the Wrapper, for chaining
+     * @returns this, for chaining
      */
-    setVal = (val: string) => {
+    setVal(val: string) {
         (<HTMLInputElement | HTMLParamElement | HTMLButtonElement |
             HTMLOptionElement | HTMLLIElement>this.element).value = val;
-        if (this.observedFeature == "value") this.subscribers.forEach(sub => sub.ofWrapper.handleChange(val, sub));
+        this.subscribers.forEach(sub => { if (sub.bindFeature === "value") sub.ofWrapper.handleChange(val, sub) });
         return this;
     }
 
@@ -282,7 +336,7 @@ export class Wrapper {
      * @param key the data- set element name
      * @returns the value of the keyed data
      */
-    getData = (key: string) => {
+    getData(key: string) {
         return this.element.dataset[key];
     }
 
@@ -291,7 +345,7 @@ export class Wrapper {
      * of the dataset is not necessary to include.
      * @param key the data- set element name
      * @param val the string to be stored
-     * @returns the Wrapper, for chaining
+     * @returns this, for chaining
      */
     setData(key: string, val: string) {
         this.element.setAttribute('data-' + key, val);
@@ -302,10 +356,40 @@ export class Wrapper {
      * Creates a new event listener of the given type on the Wrapped element
      * @param eventType type of event to bind the function to
      * @param fun the function to run when the event occurs
-     * @returns the Wrapper, for chaining
+     * @returns this, for chaining
      */
-    onEvent(eventType: keyof HTMLElementEventMap, fun: Function) {
+    onEvent(eventType: keyof HTMLElementEventMap, fun: Function): Wrapper {
         this.element.addEventListener(eventType, (e) => fun(e));
+        return this;
+    }
+
+    /**
+     * Creates a new click event listener on the wrapped element
+     * @param fun the function to run on click;
+     * @returns this, for chaining
+     */
+    onClick(fun: Function): Wrapper {
+        this.onEvent('click', fun);
+        return this;
+    }
+
+    /**
+    * Creates a new input event listener on the wrapped element
+    * @param fun the function to run on input;
+    * @returns this, for chaining
+    */
+    onInput(fun: Function): Wrapper {
+        this.onEvent('input', fun);
+        return this;
+    }
+
+    /**
+     * Creates a new change event listener on the wrapped element
+     * @param fun the function to run on changes;
+     * @returns this, for chaining
+     */
+    onChange(fun: Function): Wrapper {
+        this.onEvent('change', fun);
         return this;
     }
 
@@ -316,7 +400,7 @@ export class Wrapper {
      * Creates a series of <li> elements for elements in an array
      * @param textList the visible text to create each element for
      * @param idList optional IDs to include
-     * @returns the Wrapper, for chaining
+     * @returns this, for chaining
      */
     listContent(textList: string[], idList?: string[]) {
         if (this.element.tagName != 'UL' && this.element.tagName != 'OL') {
@@ -346,7 +430,7 @@ export class Wrapper {
      * @param textList 
      * @param valList 
      * @param idList 
-     * @returns the Wrapper, for chaining
+     * @returns this, for chaining
      */
     selectContent(textList: string[], valList?: string[], idList?: string[]) {
         if (!valList) valList = textList;
@@ -386,16 +470,44 @@ export class Wrapper {
     }
 }
 
-export interface WrappedInputLabelPairOptions {
-    label?: string,
-    default?: string,
-    placehold?: string,
-    inputType?: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week",
-    contStyle?: string,
-    lblStyle?: string,
-    inputStyle?: string,
-    stacked?: boolean
-}
+// export class WrapperlessObservable {
+//     private value: string | number | boolean;
+//     subscribers: WrapperlessObservableListMember[]
+//     constructor(initVal: string | number | boolean) {
+//         this.value = initVal;
+//         this.subscribers = [];
+//     }
+
+//     /**
+//      * Simple value getter
+//      * @returns the observed value
+//      */
+//     getVal() {
+//         return this.value;
+//     }
+
+//     /**
+//      * Value setter, notifies subscribers of change
+//      * @param newValue the new value for the observable
+//      */
+//     setVal(newValue: string | number | boolean) {
+//         this.value = newValue;
+//     }
+
+//     addSubscriber(newSub: WrapperlessObserver, xferFunc: Function){
+//         this.subscribers.push({sub: newSub, xferFunc: xferFunc})
+//     }
+
+//     /**
+//      * Propogate out a request to handle change to every entry in the subscriber list
+//      * @returns this, for chaining
+//      */
+//     notifySubscribers() {
+//         this.subscribers.forEach(m => {
+//             m.sub.handleChange(this.value)
+//         })
+//     }
+// }
 
 export class WrappedInputLabelPair extends Wrapper {
     public container: HTMLElement;
@@ -411,7 +523,7 @@ export class WrappedInputLabelPair extends Wrapper {
             if (options.contStyle) this.style(options.contStyle!);
             if (options.inputStyle) this.input.style(options.inputStyle);
             if (options.lblStyle) this.label.style(options.lblStyle);
-            if (options.label) this.label.text(options.label);
+            if (options.lbl) this.label.text(options.lbl);
             if (options.placehold) this.input.placehold(options.placehold);
             if (options.default) this.input.setVal(options.default);
             if (options.inputType) this.input.attr('type', options.inputType);
@@ -422,3 +534,5 @@ export class WrappedInputLabelPair extends Wrapper {
         }
     }
 }
+
+//TODO - any other composites?
