@@ -50,7 +50,7 @@ genericBindingSection.newWrap('p').text(boundToVar.getVal().toString()).bindTo(b
 genericBindingSection.newWrap('button').text("Increment").onClick(()=>{ boundToVar.setVal(<number>boundToVar.getVal()+1)});
 genericBindingSection.newWrap('h2').text('Observer Watching the Observable From Above');
 let boundVarView = genericBindingSection.newWrap('p').text('Double the number above: 10')
-let boundVar = new Observer(boundToVar.getVal()).bindTo(boundToVar,(nv: number)=> {
+new Observer(boundToVar.getVal()).bindTo(boundToVar,(nv: number)=> {
   boundVarView.text('Double the number above: ' + nv*2) //for illustration only
   return nv*2
 });
