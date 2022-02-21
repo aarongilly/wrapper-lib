@@ -6,7 +6,7 @@ module.exports = defineConfig({
   build: {
     sourcemap: true,
     lib: {
-      entry: path.resolve(__dirname, 'src/main.ts'),
+      entry: path.resolve(__dirname, 'src/wrapper.ts'),
       name: 'WrapperLib',
       fileName: (format) => `WrapperLib.${format}.js`
     },
