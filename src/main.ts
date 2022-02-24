@@ -1,5 +1,5 @@
 import './style.css'
-import { Observer, Wrapper, WrapperlessObservable } from './wrapper'
+import { Observer, Wrapper, WrapperlessObservable } from '../lib/wrapper-lib'
 
 const app = Wrapper.wrap(document.querySelector<HTMLDivElement>('#app')!);
 app.newWrap('h1',{text: 'Wrapper Library Test Page'});

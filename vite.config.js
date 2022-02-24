@@ -4,11 +4,10 @@ const { defineConfig } = require('vite')
 
 module.exports = defineConfig({
   build: {
-    sourcemap: true,
     lib: {
-      entry: path.resolve(__dirname, 'src/wrapper.ts'),
-      name: 'WrapperLib',
-      fileName: (format) => `WrapperLib.${format}.js`
+      entry: path.resolve(__dirname, 'lib/wrapper-lib.ts'), //hmmmmm
+      name: 'wrapper-lib',
+      fileName: (format) => `wrapper-lib.${format}.js`
     },
     rollupOptions: {
       // make sure to externalize deps that shouldn't be bundled
