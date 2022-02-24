@@ -249,6 +249,28 @@ export class Wrapper {
         return this;
     }
     /**
+     * Removes the element associated with the wrapper from the page
+     */
+    kill() {
+        this.element.remove();
+    }
+    /**
+     * Moves an existing Wrapper to a new location on the page. The existing wrapper
+     * need not already be on the page.
+     * @param relativeTo a Wrapper instance to move near
+     * @param location where to put this wrapper relative to the other
+     * @returns this, for chaining
+     */
+    relocate(relativeTo, location) {
+        if (location === 'inside')
+            relativeTo.element.appendChild(this.element);
+        if (location === 'before')
+            relativeTo.element.before(this.element);
+        if (location === 'after')
+            relativeTo.element.after(this.element);
+        return this;
+    }
+    /**
      * Returns the value of a given attribute on the wrapped element
      * @returns the value of attribute on the element, or null if no attribute exists
      */
