@@ -4,6 +4,9 @@
   "files": ["dist"],
   "main": "./dist/wrapper-lib.js",
   "module": "./dist/wrapper-lib.js",
+  "files":[
+    "/dist"
+  ],
   "exports": {
     ".":{
       "import": "./dist/wrapper-lib.js",
