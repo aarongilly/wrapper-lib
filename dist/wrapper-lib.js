@@ -35,6 +35,8 @@ export class Wrapper {
                 this.element.innerHTML = intializers.html;
             if (intializers.style)
                 this.element.setAttribute('style', intializers.style);
+            if (intializers.inputType)
+                this.element.setAttribute('type', intializers.inputType);
             if (intializers.bind) {
                 let sub = {
                     bindFeature: intializers.bind.bindFeature,
@@ -59,7 +61,7 @@ export class Wrapper {
      * Returns the newly created wrapper.
      * @param tag tag of the HTML Element to create
      * @param initializers an object with optional keys to initialize the element with
-     * @param locaitn inside appendChild(), before before(), after after()
+     * @param location inside appendChild(), before before(), after after()
      * @returns the new wrapper, for chaining
      */
     newWrap(tag, initializers, location = 'inside') {
@@ -261,6 +263,15 @@ export class Wrapper {
      */
     placehold(placeholder) {
         this.element.setAttribute('placeholder', placeholder);
+        return this;
+    }
+    /**
+     * Sets the input "type" attribute on the wrapped Element
+     * @param inputType a valid input type string to apply to the input element
+     * @returns this, for chaining
+     */
+    inputType(inputType) {
+        this.element.setAttribute('type', inputType);
         return this;
     }
     /**

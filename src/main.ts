@@ -24,6 +24,7 @@ compositeSection.newWrap('div',{style:"grid-column-start:2"}).newWrap('h2',{text
 let lbldInptSection = app.newWrap('section',{html:'<h1>Label-Input Pairs</h1>'});
 lbldInptSection.newWrap('h2').text('Simple Text Input Example');
 let inputPair = lbldInptSection.makeLabeledInput('text-input-example');
+inputPair.input.onEnterKey(()=>{console.log('You pressed enter!')});
 inputPair.label.style('margin-right: 0.5em'); //accessing inner member of the inputPair
 lbldInptSection.newWrap('h2').text("Textarea Example")
 let textareaPair = lbldInptSection.makeLabeledInput('textarea-example','textarea','inside',{stacked:true});

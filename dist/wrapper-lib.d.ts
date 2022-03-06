@@ -9,6 +9,7 @@ export interface WrapperOptions {
     html?: string;
     style?: string;
     bind?: WrapperObservableListMember;
+    inputType?: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week";
 }
 export interface WrapperObservableListMember {
     bindFeature: ObservableFeature;
@@ -50,7 +51,7 @@ export declare class Wrapper {
      * Returns the newly created wrapper.
      * @param tag tag of the HTML Element to create
      * @param initializers an object with optional keys to initialize the element with
-     * @param locaitn inside appendChild(), before before(), after after()
+     * @param location inside appendChild(), before before(), after after()
      * @returns the new wrapper, for chaining
      */
     newWrap(tag: keyof HTMLElementTagNameMap, initializers?: WrapperOptions, location?: WrapperPosition): Wrapper;
@@ -135,6 +136,12 @@ export declare class Wrapper {
      * @returns this, for chaining
      */
     placehold(placeholder: string): Wrapper;
+    /**
+     * Sets the input "type" attribute on the wrapped Element
+     * @param inputType a valid input type string to apply to the input element
+     * @returns this, for chaining
+     */
+    inputType(inputType: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week"): Wrapper;
     /**
      * Removes the element associated with the wrapper from the page
      */
