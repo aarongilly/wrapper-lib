@@ -59,7 +59,8 @@ export declare class Wrapper {
      * wrappers, use the bindToWrapper method.
      * @param target observerable to bind to
      * @param boundFeature feature on this Wrapper to change, not used if xferFunc is supplied
-     * @param xferFunc optional, what to do with the new value, overrides boundFeature
+     * @param xferFunc optional, what to do with the new value. If this function returns a value,
+     * it will be applied to the `boundFeature`.
      */
     bindTo(target: WrapperlessObservable, boundFeature?: ObservableFeature, xferFunc?: Function): void;
     /**

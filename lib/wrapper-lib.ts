@@ -9,6 +9,7 @@ export interface WrapperOptions {
     html?: string;
     style?: string;
     bind?: WrapperObservableListMember;
+    inputType?: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week"
 }
 
 export interface WrapperObservableListMember {
@@ -70,6 +71,7 @@ export class Wrapper {
             if (intializers.text != undefined) this.element.innerText = intializers.text!;
             if (intializers.html != undefined) this.element.innerHTML = intializers.html!;
             if (intializers.style) this.element.setAttribute('style', intializers.style!);
+            if (intializers.inputType) this.element.setAttribute('type', intializers.inputType);
             if (intializers.bind) {
                 let sub: WrapperObservableListMember = {
                     bindFeature: intializers.bind.bindFeature,
@@ -96,7 +98,7 @@ export class Wrapper {
      * Returns the newly created wrapper.
      * @param tag tag of the HTML Element to create
      * @param initializers an object with optional keys to initialize the element with
-     * @param locaitn inside appendChild(), before before(), after after()
+     * @param location inside appendChild(), before before(), after after()
      * @returns the new wrapper, for chaining
      */
     newWrap(tag: keyof HTMLElementTagNameMap, initializers?: WrapperOptions, location: WrapperPosition = 'inside'): Wrapper {
@@ -112,16 +114,26 @@ export class Wrapper {
      * wrappers, use the bindToWrapper method.
      * @param target observerable to bind to
      * @param boundFeature feature on this Wrapper to change, not used if xferFunc is supplied
-     * @param xferFunc optional, what to do with the new value, overrides boundFeature
+     * @param xferFunc optional, what to do with the new value. If this function returns a value,
+     * it will be applied to the `boundFeature`.
      */
     bindTo(target: WrapperlessObservable, boundFeature?: ObservableFeature, xferFunc?: Function) {
         if (xferFunc != undefined) {
             target.addSubscriber(this, xferFunc);
         } else {
             if (boundFeature == undefined) throw new Error("No bound feature or xferFunc included.");
-            if (boundFeature == 'text') target.addSubscriber(this, (nv: string) => this.text(nv));
-            if (boundFeature == 'value') target.addSubscriber(this, (nv: string) => this.setVal(nv));
-            if (boundFeature == 'style') target.addSubscriber(this, (nv: string) => this.style(nv));
+            if (boundFeature == 'text') {
+                target.addSubscriber(this, (nv: string) => this.text(nv));
+                this.text(target.getVal().toString())
+            }
+            if (boundFeature == 'value'){
+                target.addSubscriber(this, (nv: string) => this.setVal(nv));
+                this.setVal(target.getVal().toString());
+            }
+            if (boundFeature == 'style'){
+                target.addSubscriber(this, (nv: string) => this.style(nv));
+                this.setStyle(target.getVal().toString());
+            }
         }
     }
 
@@ -175,7 +187,12 @@ export class Wrapper {
             subscription(newValue);
         } else {
             if (subscription.xferFunc) {
-                subscription.xferFunc(newValue);
+                let result = subscription.xferFunc(newValue);
+                if(result){
+                    if (subscription.toFeature === 'text') this.text(result.toString());
+                    if (subscription.toFeature === 'style') this.style(result.toString());
+                    if (subscription.toFeature === 'value') this.setVal(result.toString());    
+                }
             } else {
                 if (subscription.toFeature === 'text') this.text(newValue);
                 if (subscription.toFeature === 'style') this.style(newValue);
@@ -280,9 +297,19 @@ export class Wrapper {
     }
 
     /**
+     * Sets the input "type" attribute on the wrapped Element
+     * @param inputType a valid input type string to apply to the input element
+     * @returns this, for chaining
+     */
+    inputType(inputType: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week"): Wrapper{
+        this.element.setAttribute('type', inputType);
+        return this
+    }
+
+    /**
      * Removes the element associated with the wrapper from the page
      */
-    kill(){
+    kill() {
         this.element.remove();
     }
 
@@ -293,13 +320,13 @@ export class Wrapper {
      * @param location where to put this wrapper relative to the other
      * @returns this, for chaining
      */
-    relocate(relativeTo: Wrapper, location: "inside" | "after" | "before"){
-        if(location==='inside') relativeTo.element.appendChild(this.element);
-        if(location==='before') relativeTo.element.before(this.element);
-        if(location==='after') relativeTo.element.after(this.element);
+    relocate(relativeTo: Wrapper, location: "inside" | "after" | "before") {
+        if (location === 'inside') relativeTo.element.appendChild(this.element);
+        if (location === 'before') relativeTo.element.before(this.element);
+        if (location === 'after') relativeTo.element.after(this.element);
         return this;
     }
-    
+
     /**
      * Returns the value of a given attribute on the wrapped element
      * @returns the value of attribute on the element, or null if no attribute exists
