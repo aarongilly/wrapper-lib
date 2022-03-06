@@ -77,7 +77,8 @@ export class Wrapper {
      * wrappers, use the bindToWrapper method.
      * @param target observerable to bind to
      * @param boundFeature feature on this Wrapper to change, not used if xferFunc is supplied
-     * @param xferFunc optional, what to do with the new value, overrides boundFeature
+     * @param xferFunc optional, what to do with the new value. If this function returns a value,
+     * it will be applied to the `boundFeature`.
      */
     bindTo(target, boundFeature, xferFunc) {
         if (xferFunc != undefined) {
@@ -86,12 +87,18 @@ export class Wrapper {
         else {
             if (boundFeature == undefined)
                 throw new Error("No bound feature or xferFunc included.");
-            if (boundFeature == 'text')
+            if (boundFeature == 'text') {
                 target.addSubscriber(this, (nv) => this.text(nv));
-            if (boundFeature == 'value')
+                this.text(target.getVal().toString());
+            }
+            if (boundFeature == 'value') {
                 target.addSubscriber(this, (nv) => this.setVal(nv));
-            if (boundFeature == 'style')
+                this.setVal(target.getVal().toString());
+            }
+            if (boundFeature == 'style') {
                 target.addSubscriber(this, (nv) => this.style(nv));
+                this.setStyle(target.getVal().toString());
+            }
         }
     }
     /**
@@ -147,7 +154,15 @@ export class Wrapper {
         }
         else {
             if (subscription.xferFunc) {
-                subscription.xferFunc(newValue);
+                let result = subscription.xferFunc(newValue);
+                if (result) {
+                    if (subscription.toFeature === 'text')
+                        this.text(result.toString());
+                    if (subscription.toFeature === 'style')
+                        this.style(result.toString());
+                    if (subscription.toFeature === 'value')
+                        this.setVal(result.toString());
+                }
             }
             else {
                 if (subscription.toFeature === 'text')
