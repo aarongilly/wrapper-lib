@@ -704,4 +704,10 @@ export class WrappedInputLabelPair extends Wrapper {
     }
 }
 
+/*
+export class WrappedModal extends Wrapper{
+    ... modals? Very very useful.
+    https://www.w3schools.com/howto/howto_css_modals.asp
+}
+*/
 //TODO - any other composites?

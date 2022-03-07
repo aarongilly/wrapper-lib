@@ -125,6 +125,12 @@ export declare class Wrapper {
      */
     style(styleString: string, append?: boolean): Wrapper;
     /**
+     * Sets the classList of the Wrapped Element
+     * @param classText a single class name or array of class names to apply
+     * @returns this, for chaining
+     */
+    class(classText: string | string[]): this;
+    /**
      * Sets the name of the wrapped element.
      * @param name the text to set
      * @returns this, for chaining
@@ -146,6 +152,12 @@ export declare class Wrapper {
      * Removes the element associated with the wrapper from the page
      */
     kill(): void;
+    /**
+     * Calls "remove" on the classList of the wrapped element
+     * @param className class to remove from the element
+     * @returns this, for chaining
+     */
+    removeClass(className: string): Wrapper;
     /**
      * Moves an existing Wrapper to a new location on the page. The existing wrapper
      * need not already be on the page.
