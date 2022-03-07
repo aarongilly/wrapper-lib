@@ -239,15 +239,23 @@ export declare class Wrapper {
      */
     onChange(fun: Function): Wrapper;
     /**
-     * For use with <ol> or <ul> elements
-     * Creates a series of <li> elements for elements in an array
+     * Creates a new change event listener on the wrapped element
+     * @param fun the function to run on changes;
+     * @returns this, for chaining
+     */
+    onEnterKey(fun: Function): Wrapper;
+    /**
+     * For use with <ol> or <ul> elements. EXPECTS TO BE PUT INSIDE
+     * AN EXISTING <ol> OR <uL> ELEMENT.
+     *  Creates a series of <li> elements for elements in an array
      * @param textList the visible text to create each element for
      * @param idList optional IDs to include
      * @returns this, for chaining
      */
     listContent(textList: string[], idList?: string[]): this;
     /**
-     * For use with <select> elements
+     * For use with <select> elements. EXPECTS TO BE PUT INSIDE
+     * AN EXISTING <select> ELEMENT.
      * Creates a list of <option> elements inside the <select>
      * with the given display text and value text
      * @param textList

@@ -277,6 +277,18 @@ export class Wrapper {
     }
 
     /**
+     * Sets the classList of the Wrapped Element
+     * @param classText a single class name or array of class names to apply
+     * @returns this, for chaining
+     */
+    class(classText: string | string[]){
+        if(typeof classText === "string") classText = [classText];
+        let classes = this.element.classList;
+        classes.add(classText.join(" "));
+        return this;
+    }
+
+    /**
      * Sets the name of the wrapped element.
      * @param name the text to set
      * @returns this, for chaining
@@ -311,6 +323,17 @@ export class Wrapper {
      */
     kill() {
         this.element.remove();
+    }
+
+    /**
+     * Calls "remove" on the classList of the wrapped element
+     * @param className class to remove from the element
+     * @returns this, for chaining
+     */
+    removeClass(className: string): Wrapper{
+        let classes = this.element.classList;
+        classes.remove(className);
+        return this;
     }
 
     /**

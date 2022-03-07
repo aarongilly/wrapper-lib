@@ -7,7 +7,8 @@ app.newWrap('h1',{text: 'Wrapper Library Test Page'});
 //#region #### Simple Examples ####
 let simpleSection = app.newWrap('section',{html:'<h1>Simple Examples</h1>'}); 
 let myBody = simpleSection.newWrap('p',{id:'my-paragraph-2',style:'font-size:1.5em'})
-.text('Last time I checked, the time was: ' + new Date().toLocaleTimeString());
+.text('Last time I checked, the time was: ' + new Date().toLocaleTimeString())
+.class('styled-text');
 simpleSection.newWrap('button',{text: 'Check again'}).onEvent('click',()=>{
   myBody.text(myBody.getText().substring(0, 35) + new Date().toLocaleTimeString()
 )});
