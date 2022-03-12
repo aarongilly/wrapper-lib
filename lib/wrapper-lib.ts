@@ -8,24 +8,8 @@ export interface WrapperOptions {
     text?: string;
     html?: string;
     style?: string;
-    bind?: WrapperObservableListMember;
+    // bind?: WrapperObservableListMember;
     inputType?: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week"
-}
-
-export interface WrapperObservableListMember {
-    bindFeature: ObservableFeature;
-    toFeature: ObservableFeature;
-    ofWrapper: Wrapper;
-    xferFunc?: Function;
-}
-
-export interface WrapperlessObservableListMember {
-    xferFunc: Function;
-    sub: WrapperlessObserver;
-}
-
-export interface WrapperlessObserver {
-    handleChange: Function;
 }
 
 export interface WrappedInputLabelPairOptions {
@@ -46,9 +30,14 @@ type HTMLElementsWithValue = HTMLButtonElement | HTMLInputElement | HTMLMeterEle
 
 export class Wrapper {
     public element: HTMLElement;
-    public subscribers: WrapperObservableListMember[];
+    public subscribers: Observer[];
+    public subscriptions: Subscription[];
+    public parent: Wrapper | undefined;
+    public children: Wrapper[];
     constructor(tag?: keyof HTMLElementTagNameMap, existingElement?: HTMLElement, intializers?: WrapperOptions) {
         this.subscribers = [];
+        this.subscriptions = [];
+        this.children = [];
         if (existingElement) {
             this.element = existingElement;
         } else {
@@ -72,15 +61,15 @@ export class Wrapper {
             if (intializers.html != undefined) this.element.innerHTML = intializers.html!;
             if (intializers.style) this.element.setAttribute('style', intializers.style!);
             if (intializers.inputType) this.element.setAttribute('type', intializers.inputType);
-            if (intializers.bind) {
-                let sub: WrapperObservableListMember = {
-                    bindFeature: intializers.bind.bindFeature,
-                    toFeature: intializers.bind.toFeature,
-                    ofWrapper: this,
-                    xferFunc: intializers.bind.xferFunc
-                }
-                intializers.bind.ofWrapper.addSubscriber(sub);//this feels wrong
-            }
+            // if (intializers.bind) {
+            //     let sub: WrapperObservableListMember = {
+            //         bindFeature: intializers.bind.bindFeature,
+            //         toFeature: intializers.bind.toFeature,
+            //         ofWrapper: this,
+            //         xferFunc: intializers.bind.xferFunc
+            //     }
+            //     intializers.bind.ofWrapper.addSubscriber(sub);//this feels wrong
+            // }
         }
     }
 
@@ -116,62 +105,21 @@ export class Wrapper {
      * @param boundFeature feature on this Wrapper to change, not used if xferFunc is supplied
      * @param xferFunc optional, what to do with the new value. If this function returns a value,
      * it will be applied to the `boundFeature`.
-     */
-    bindTo(target: WrapperlessObservable, boundFeature?: ObservableFeature, xferFunc?: Function) {
-        if (xferFunc != undefined) {
-            target.addSubscriber(this, xferFunc);
-        } else {
-            if (boundFeature == undefined) throw new Error("No bound feature or xferFunc included.");
-            if (boundFeature == 'text') {
-                target.addSubscriber(this, (nv: string) => this.text(nv));
-                this.text(target.getVal().toString())
-            }
-            if (boundFeature == 'value') {
-                target.addSubscriber(this, (nv: string) => this.setVal(nv));
-                this.setVal(target.getVal().toString());
-            }
-            if (boundFeature == 'style') {
-                target.addSubscriber(this, (nv: string) => this.style(nv));
-                this.setStyle(target.getVal().toString());
-            }
-        }
-    }
-
-    /**
-     * Bind this wrapper's text/style/value to the text/style/value of the targetWrapper
-     * @param targetWrapper Wrapper to bind to
-     * @param targetFeature The feature you care about on the Wrapper you're subscribing 
-     * @param thisFeature Which part of this Wrapper should be updated
-     * @param using optional transfer function, default: text for non-inputs, otherwise value
      * @returns this, for chaining
      */
-    bindToWrapper(targetWrapper: Wrapper, targetFeature: ObservableFeature, thisFeature: ObservableFeature, using?: Function): Wrapper {
-        let sub: WrapperObservableListMember = {
-            bindFeature: targetFeature,
-            toFeature: thisFeature,
-            ofWrapper: this,
-            xferFunc: using
-        }
-        targetWrapper.addSubscriber(sub);
-        //initilize bound value to whatever it is now
-        let currentVal = targetWrapper.getText();
-        if (sub.bindFeature === 'style' && targetWrapper.getStyle() != null) currentVal = targetWrapper.getStyle()!;
-        if (sub.bindFeature === 'value') currentVal = targetWrapper.getVal().toString();
-        this.handleChange(currentVal, sub)
-        return this
+    bindTo(target: Observable, boundFeature?: ObservableFeature, xferFunc?: Function): Wrapper {
+       return this 
     }
 
     /**
      * Propogate out a request to handle change to every entry in the subscriber list
+     * @param bindingKey //TODO - this
      * @returns this, for chaining
      */
-    notifySubscribers(): Wrapper {
+    notifySubscribers(bindingKey: string): Wrapper {
         // console.warn
         this.subscribers.forEach(sub => {
-            let newVal = this.getText();
-            if (sub.bindFeature == 'value') newVal = this.getVal().toString();
-            if (sub.bindFeature == 'style') newVal = this.getStyle()!;
-            sub.ofWrapper.handleChange(newVal, sub)
+
         })
         return this;
     }
@@ -182,23 +130,8 @@ export class Wrapper {
      * @param newValue the new value from the thing
      * @param subscription the subscription itself, or the function to run
      */
-    handleChange(newValue: string, subscription: WrapperObservableListMember | Function): void {
-        if (typeof subscription === 'function') {
-            subscription(newValue);
-        } else {
-            if (subscription.xferFunc) {
-                let result = subscription.xferFunc(newValue);
-                if (result) {
-                    if (subscription.toFeature === 'text') this.text(result.toString());
-                    if (subscription.toFeature === 'style') this.style(result.toString());
-                    if (subscription.toFeature === 'value') this.setVal(result.toString());
-                }
-            } else {
-                if (subscription.toFeature === 'text') this.text(newValue);
-                if (subscription.toFeature === 'style') this.style(newValue);
-                if (subscription.toFeature === 'value') this.setVal(newValue);
-            }
-        }
+    handleChange(newValue: string, subscription: Subscription | Function): void {
+        //todo
     }
 
     /**
@@ -207,14 +140,13 @@ export class Wrapper {
      * @param newSub subscribing wrapper to add
      * @returns this, for chaining
      */
-    addSubscriber(newSub: WrapperObservableListMember): Wrapper {
-        this.subscribers.push(newSub);
+    addSubscriber(newSub: Observer): Wrapper {
+        //todo
         return this;
     }
 
-    //removeSubscriber //todo - this
     removeSubscriber(subbedWrapper: Wrapper): Wrapper {
-        this.subscribers = this.subscribers.filter(sub => sub.ofWrapper != subbedWrapper)
+        //todo
         return this;
     }
 
@@ -234,7 +166,7 @@ export class Wrapper {
      */
     text(text: string): Wrapper {
         this.element.innerText = text;
-        this.subscribers.forEach(sub => { if (sub.bindFeature == 'text') sub.ofWrapper.handleChange(text, sub) });
+        this.subscribers.forEach(sub =>  {});//todo
         return this
     }
 
@@ -272,7 +204,7 @@ export class Wrapper {
             if (style.charAt(style.length - 1) != ";") style = style + "; "
         }
         this.element.setAttribute('style', style + styleString);
-        this.subscribers.forEach(sub => { if (sub.bindFeature === 'style') sub.ofWrapper.handleChange(styleString, sub) });
+        this.subscribers.forEach(sub => { });//todo
         return this
     }
 
@@ -419,7 +351,7 @@ export class Wrapper {
     setVal(val: string) {
         (<HTMLInputElement | HTMLParamElement | HTMLButtonElement |
             HTMLOptionElement | HTMLLIElement>this.element).value = val;
-        this.subscribers.forEach(sub => { if (sub.bindFeature === "value") sub.ofWrapper.handleChange(val, sub) });
+        this.subscribers.forEach(sub => { }); //todo
         return this;
     }
 
@@ -581,100 +513,79 @@ export class Wrapper {
     }
 }
 
-export class WrapperlessObservable {
-    private value: string | number | boolean;
-    subscribers: WrapperlessObservableListMember[]
-    constructor(initVal: string | number | boolean) {
+export class Observable {
+    private value: any;
+    subscribers: Observer[]
+    constructor(initVal: any) {
         this.value = initVal;
         this.subscribers = [];
     }
 
     /**
      * Simple value getter
+     * @param pathToProp dot-separated path to nested property
      * @returns the observed value
      */
-    getVal() {
-        return this.value;
+    getVal(pathToProp?: string) {
+        if(pathToProp == undefined) return this.value;
+        //todo - other paths
     }
 
     /**
      * Value setter, notifies subscribers of change
      * @param newValue the new value for the observable
+     * @param pathToProp dot-separated path to nested property
      */
-    setVal(newValue: string | number | boolean) {
+    setVal(newValue: any, pathToProp?: string) {
         this.value = newValue;
         this.notifySubscribers();
     }
 
-    addSubscriber(newSub: WrapperlessObserver, xferFunc: Function) {
-        this.subscribers.push({ sub: newSub, xferFunc: xferFunc })
+    addSubscriber(newSub: Observer, xferFunc: Function) {
+        // this.subscribers.push({ sub: newSub, xferFunc: xferFunc })
     }
 
     /**
      * Propogate out a request to handle change to every entry in the subscriber list
      * @returns this, for chaining
      */
-    notifySubscribers() {
+    notifySubscribers(changeKey?: string) {
         this.subscribers.forEach(m => {
-            m.sub.handleChange(this.value, m.xferFunc)
+            
         })
     }
 }
 
-export class Observer implements WrapperlessObserver {
-    value: string | number | boolean
-    constructor(init: string | number | boolean) {
-        this.value = init
+export class Observer {
+    value: any;
+    subscriptions: Subscription[]
+    constructor(initValue: any){
+        this.value = initValue;
+        this.subscriptions = [];
     }
 
-    /**
-        * Binds the Wrapper to a WrapperlessObservable instance. If you want to bind between
-        * wrappers, use the bindToWrapper method.
-        * @param target observerable to bind to
-        * @param boundFeature feature on this Wrapper to change, not used if xferFunc is supplied
-        * @param xferFunc optional, what to do with the new value, overrides boundFeature
-        * @returns this, for chaining
-        */
-    bindTo(target: WrapperlessObservable, xferFunc?: Function) {
-        if (xferFunc != undefined) {
-            target.addSubscriber(this, xferFunc);
-        } else {
-            target.addSubscriber(this, (nv: string | number | boolean) => { this.value = nv });
-        }
+    bindTo(target: Observable, changeKey?: string, xferFunc?: Function) {
+        //todo
         return this;
-    }
-
-    /**
-     * Bind this wrapper's text/style/value to the text/style/value of the targetWrapper
-     * @param targetWrapper Wrapper to bind to
-     * @param targetFeature The feature you care about on the Wrapper you're subscribing 
-     * @param thisFeature Which part of this Wrapper should be updated
-     * @param using optional transfer function, default: text for non-inputs, otherwise value
-     * @returns this, for chaining
-     */
-    bindToWrapper(targetWrapper: Wrapper, targetFeature: ObservableFeature, using?: Function): Observer {
-        if (using == undefined) using = (nv: string | number | boolean) => { return nv };
-        let sub: WrapperObservableListMember = {
-            toFeature: 'text',
-            bindFeature: targetFeature,
-            ofWrapper: targetWrapper, //hack - this isn't used in this context, but must exist
-            xferFunc: using
-        }
-        targetWrapper.addSubscriber(sub);
-        //initilize bound value to whatever it is now
-        let currentVal: string | number | boolean = targetWrapper.getText();
-        if (sub.bindFeature === 'style' && targetWrapper.getStyle() != null) currentVal = targetWrapper.getStyle()!;
-        if (sub.bindFeature === 'value') currentVal = targetWrapper.getVal();
-        this.handleChange(currentVal, using)
-        return this
     }
 
     /**
      * Called by Observables when they are triggered by changes
      * @param newVal the value to set
      */
-    handleChange(newVal: string | number | boolean, doFun: Function) {
+    handleChange(newVal: any, doFun: Function) {
         this.value = doFun(newVal);
+    }
+}
+
+export class Subscription{
+    public owner: Observer;
+    public boundTo: Observable;
+    public boundPath?: string;
+    constructor(owner: Observer, boundTo: Observable, boundPath?: string, xfer?: Function){
+        this.owner = owner;
+        this.boundTo = boundTo;
+        this.boundPath = boundPath;
     }
 }
 

@@ -1,8 +1,15 @@
 import './style.css'
-import { Observer, Wrapper, WrapperlessObservable } from '../lib/wrapper-lib'
+import { Observer, Wrapper, Observable } from '../lib/wrapper-lib'
 
 const app = Wrapper.wrap(document.querySelector<HTMLDivElement>('#app')!);
 app.newWrap('h1',{text: 'Wrapper Library Test Page'});
+
+//#region #### New Binding Test ####
+let newBindingSection = app.newWrap('section',{html: "<h1>New Binding Method Tester</h1>"});
+let newInput = newBindingSection.newWrap('input')
+newInput.placehold("Test new binding");
+let boundP = newBindingSection.newWrap("p").text("Bind me");
+// boundP.bindTo(newInput)
 
 //#region #### Simple Examples ####
 let simpleSection = app.newWrap('section',{html:'<h1>Simple Examples</h1>'}); 
@@ -44,10 +51,11 @@ checkPair.input.onEvent('click',()=>{
 let datePair = grid.makeLabeledInput('date-input',undefined,undefined,{inputType:'date',lbl: "Date Input",lblStyle: "margin-right: 0.5em"});
 //#endregion
 
+/*
 //#region #### Binding to Variables ####
 let genericBindingSection = app.newWrap('section',{html:"<h1>Generic Data Binding</h1>"});
 genericBindingSection.newWrap('h2').text('Bound Wrapper to WrapperlessObservable')
-let boundToVar = new WrapperlessObservable(5);
+let boundToVar = new Observable(5);
 genericBindingSection.newWrap('p').text(boundToVar.getVal().toString()).bindTo(boundToVar,"text");
 genericBindingSection.newWrap('button').text("Increment").onClick(()=>{ boundToVar.setVal(<number>boundToVar.getVal()+1)});
 genericBindingSection.newWrap('h2').text('Observer Watching the Observable From Above');
@@ -81,3 +89,4 @@ let bindingInput = wrapperBindingSection.newWrap('input').setVal('Enter a Color 
 boundText.bindToWrapper(bindingInput,'value','text')
   .bindToWrapper(bindingInput,'value','style',(newVal: string)=>{boundText.style('color:' + newVal)});
 //#endregion
+*/
