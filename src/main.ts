@@ -2,91 +2,139 @@ import './style.css'
 import { Observer, Wrapper, Observable } from '../lib/wrapper-lib'
 
 const app = Wrapper.wrap(document.querySelector<HTMLDivElement>('#app')!);
-app.newWrap('h1',{text: 'Wrapper Library Test Page'});
-
-//#region #### New Binding Test ####
-let newBindingSection = app.newWrap('section',{html: "<h1>New Binding Method Tester</h1>"});
-let newInput = newBindingSection.newWrap('input')
-newInput.placehold("Test new binding");
-let boundP = newBindingSection.newWrap("p").text("Bind me");
-// boundP.bindTo(newInput)
+app.newWrap('h1', { t: 'Wrapper Library Test Page' });
 
 //#region #### Simple Examples ####
-let simpleSection = app.newWrap('section',{html:'<h1>Simple Examples</h1>'}); 
-let myBody = simpleSection.newWrap('p',{id:'my-paragraph-2',style:'font-size:1.5em'})
-.text('Last time I checked, the time was: ' + new Date().toLocaleTimeString())
-.class('styled-text');
-simpleSection.newWrap('button',{text: 'Check again'}).onEvent('click',()=>{
+let simpleSection = app.newWrap('section', { h: '<h1>Simple Examples</h1>' });
+simpleSection.newWrap('div', { t: "Here is a Wrapper around a Paragraph, and a Wrapper around a button that performs an action", c: "explanatory" })
+let myBody = simpleSection.newWrap('p', { i: 'my-paragraph-2', s: 'font-size:1.5em' })
+  .text('Last time I checked, the time was: ' + new Date().toLocaleTimeString())
+  .class('styled-text');
+simpleSection.newWrap('button', { t: 'Check again' }).onEvent('click', () => {
   myBody.text(myBody.getText().substring(0, 35) + new Date().toLocaleTimeString()
-)});
+  )
+});
 //#endregion
 
-//#region #### Composite Example ####
-let compositeSection = app.newWrap('section').newWrap('h1',{text: "Composite Examples"}).newWrap('div',{style: 'display: grid; grid-column-layout: 1fr 1fr'},'after')
+//#region #### Composite Examples ####
+let compositeSection = app.newWrap('section', { h: "<h1>Composite Examples</h1>" })
+compositeSection.newWrap('p', { t: "The library contains utilities to make composite Wrappers (i.e. Wrappers containing Wrappers) to cover common situations", c: 'explanatory' })
+let compGrid = compositeSection.newWrap('div', { s: 'display: grid; grid-column-layout: 1fr 1fr' })
 let features = ['Supports Chaining', 'Concise(er) syntax', 'Basic data binding', 'Component-ish things'];
-compositeSection.newWrap('div',{style:"grid-column-start:1"}).newWrap('h2',{text: "Create Lists from Arrays"}).newWrap('ul',undefined,'after').listContent(features);
-compositeSection.newWrap('div',{style:"grid-column-start:2"}).newWrap('h2',{text: "Create Selects from Arrays"}).newWrap('select',undefined,'after').selectContent(features);
-//#endregion
-
-//#region #### Labeled Input Examples ####
-let lbldInptSection = app.newWrap('section',{html:'<h1>Label-Input Pairs</h1>'});
-lbldInptSection.newWrap('h2').text('Simple Text Input Example');
-let inputPair = lbldInptSection.makeLabeledInput('text-input-example');
-inputPair.input.onEnterKey(()=>{console.log('You pressed enter!')});
-inputPair.label.style('margin-right: 0.5em'); //accessing inner member of the inputPair
-lbldInptSection.newWrap('h2').text("Textarea Example")
-let textareaPair = lbldInptSection.makeLabeledInput('textarea-example','textarea','inside',{stacked:true});
+compGrid.newWrap('div', { s: "grid-column-start:1" }).newWrap('h2', { t: "Create Lists from Arrays" }).newWrap('ul', undefined, 'after').listContent(features);
+compGrid.newWrap('div', { s: "grid-column-start:2" }).newWrap('h2', { t: "Create Selects from Arrays" }).newWrap('select', undefined, 'after').selectContent(features);
+compositeSection.newWrap('h2').text('Simple Text Input Example');
+let inputPair = compositeSection.makeLabeledInput('text-input-example');
+inputPair.input.onEnterKey(() => { console.log('You pressed enter!') }); //example event binding
+inputPair.label.style('margin-right: 0.5em').text("This Label is Paired with ➡"); //accessing inner member of the inputPair
+compositeSection.newWrap('h2').text("Textarea Example")
+let textareaPair = compositeSection.makeLabeledInput('textarea-example', 'textarea', 'inside', { stacked: true, lbl: "This is a text area:" });
 textareaPair.label.style('margin-right: 0.5em');
-lbldInptSection.newWrap('h2').text("Other Types of Inputs")
-let grid = lbldInptSection.newWrap('div').style('display: grid; grid-template-columns: 1fr 1fr');
-let checkPair = grid.makeLabeledInput('check-input','input','inside',{inputType:'checkbox', lbl: "Show Date Example, too?"});
+textareaPair.input.setVal("These labels are properly associated with their inputs. Clicking the label will select the associated input.")
+compositeSection.newWrap('h2').text("Other Types of Inputs")
+let grid = compositeSection.newWrap('div').style('display: grid; grid-template-columns: 1fr 1fr');
+let checkPair = grid.makeLabeledInput('check-input', 'input', 'inside', { inputType: 'checkbox', lbl: "Show Date Example, too?" });
 (<HTMLInputElement>checkPair.input.element).checked = true;
-checkPair.input.onEvent('click',()=>{
-  if(checkPair.input.getVal()){
+checkPair.input.onEvent('click', () => {
+  if (checkPair.input.getVal()) {
     datePair.style('display:flex')
-  }else{
+  } else {
     datePair.style('display:none')
   }
 })
-let datePair = grid.makeLabeledInput('date-input',undefined,undefined,{inputType:'date',lbl: "Date Input",lblStyle: "margin-right: 0.5em"});
+let datePair = grid.makeLabeledInput('date-input', undefined, undefined, { inputType: 'date', lbl: "Date Input", lblStyle: "margin-right: 0.5em" });
 //#endregion
 
-/*
-//#region #### Binding to Variables ####
-let genericBindingSection = app.newWrap('section',{html:"<h1>Generic Data Binding</h1>"});
-genericBindingSection.newWrap('h2').text('Bound Wrapper to WrapperlessObservable')
-let boundToVar = new Observable(5);
-genericBindingSection.newWrap('p').text(boundToVar.getVal().toString()).bindTo(boundToVar,"text");
-genericBindingSection.newWrap('button').text("Increment").onClick(()=>{ boundToVar.setVal(<number>boundToVar.getVal()+1)});
-genericBindingSection.newWrap('h2').text('Observer Watching the Observable From Above');
-let boundVarView = genericBindingSection.newWrap('p').text('Double the number above: 10')
-new Observer(boundToVar.getVal()).bindTo(boundToVar,(nv: number)=> {
-  boundVarView.text('Double the number above: ' + nv*2) //for illustration only
-  return nv*2
-});
-genericBindingSection.newWrap('h2').text("Observer of Wrappers");
-let inputToBindAgainst = genericBindingSection.newWrap('input').placehold('Enter some text')
-let wrapperBondVarView = genericBindingSection.newWrap('p').text("Input value: ");
-new Observer('whatever').bindToWrapper(inputToBindAgainst,'value',(nv: string)=>{
-  wrapperBondVarView.text("Input value: " + nv)
-  return nv;
+//#region #### Binding with Variables Section ####
+let bSect = app.newWrap('section', { h: '<h1>Binding with Variables</h1>' });
+bSect.newWrap('p', {
+  t: `In this library there are Observables, Observers, and Wrappers (which functions as both Obserables and Observers)`,
+  c: 'explanatory'
 })
+bSect.newWrap('h2', { t: "Observers Bound to Observables" });
+let primativeObs = new Observable(0);
+let pWatcher = new Observer().bindTo(primativeObs);
+let objectObs = new Observable({ propertyOfInterest: 0 });
+let oWatcher = new Observer().bindTo(objectObs, 'propertyOfInterest');
+let nestedObs = new Observable({ outer: { inner: 0 } });
+let nWatcher = new Observer().bindTo(nestedObs, 'outer.inner');
+
+let incBtn = bSect.newWrap('button').text("Increment & Log Observables");
+incBtn.onClick(() => {
+  primativeObs.setVal(primativeObs.getVal() + 1);
+  objectObs.setVal(objectObs.getVal('propertyOfInterest') + 1, 'propertyOfInterest');
+  nestedObs.setVal(nestedObs.getVal('outer.inner') + 1, 'outer.inner');
+  console.table({
+    "primative-watcher": pWatcher.boundVal,
+    "object-watcher": oWatcher.boundVal,
+    "nested-object-watcher": nWatcher.boundVal
+  });
+  alert(`Variable Values:
+  Primative value: ${primativeObs.getVal()}
+  ----------
+  Object: ${JSON.stringify(objectObs.getVal(), null, 2)}
+  ----------
+  Nested: ${JSON.stringify(nestedObs.getVal(), null, 2)}`)
+})
+
+
+bSect.newWrap('h2', { t: "Wrappers Bound to Observerables" });
+let flexCont = bSect.newWrap('div', { s: "display:flex; justify-content: space-evenly" })
+//experimenting with alternate ways to build up composites
+flexCont.newWrap('div', { s: 'display:flex' })
+  .newWrap('div', { s: "border:solid; padding:0.5em" })
+  .newWrap('div', { t: "Primative Observable", s: "margin-top:0.25em" }).parent
+  .newWrap('p', { s: "text-align: center; margin: 0.25em; font-size: 1.5em" }).bindTextTo(primativeObs).parent
+  .newWrap('button', { s: "width: 100%", t: "Increment Primative" }).onClick(() => primativeObs.setVal(primativeObs.getVal() + 1));
+
+flexCont.newWrap('div', { s: 'display:flex' })
+  .newWrap('div', { s: "border:solid; padding:0.5em" })
+  .newWrap('div', { t: "Object Property Observable", s: "margin-top:0.25em" }).parent
+  .newWrap('p', { s: "text-align: center; margin: 0.25em; font-size: 1.5em" })
+  .bindTextTo(objectObs, 'propertyOfInterest', () => JSON.stringify(objectObs.getVal())).parent
+  .newWrap('button', { s: "width: 100%", t: "Increment Object Property" }).onClick(() => objectObs.setVal(objectObs.getVal('propertyOfInterest') + 1, 'propertyOfInterest'));
+
+flexCont.newWrap('div', { s: 'display:flex' })
+  .newWrap('div', { s: "border:solid; padding:0.5em" })
+  .newWrap('div', { t: "Object Nested Property Observable", s: "margin-top:0.25em" }).parent
+  .newWrap('p', { s: "text-align: center; margin: 0.25em; font-size: 1.5em" })
+  .bindTextTo(nestedObs, 'outer.inner', () => JSON.stringify(nestedObs.getVal())).parent
+  .newWrap('button', { s: "width: 100%", t: "Increment Nested Object Property" }).onClick(() => nestedObs.setVal(nestedObs.getVal('outer.inner') + 1, 'outer.inner'));
 //#endregion
 
-//#region #### Inter-Wrappter Data Binding Region ####
-let wrapperBindingSection = app.newWrap('section',{html:"<h1>Inter-Wrapper Binding Example</h1>"});
-wrapperBindingSection.newWrap('h2').text('Bound Select, with Binding Breaker Demo')
-let bindingSelect = wrapperBindingSection.newWrap('select').selectContent(['1', "2", "3"],["You picked one", "You picked two", "You picked three"]);
-let boundToSelect = wrapperBindingSection.newWrap('p').bindToWrapper(bindingSelect,'value','text');
-wrapperBindingSection.newWrap('button',{text:'Break Binding'}).onEvent('click',()=>{
-  bindingSelect.removeSubscriber(boundToSelect);
-  boundToSelect.text('Binding broken, this will no longer update.');
-}).style('margin-right: 0.5em')
-wrapperBindingSection.newWrap('button',{text: 'Re-bind'}).onEvent('click',()=>boundToSelect.bindToWrapper(bindingSelect,'value','text'));
-wrapperBindingSection.newWrap('h2',{text:"Binding Text & Style (via xferFunc)"})
-let boundText = wrapperBindingSection.newWrap('p',{text: "Enter some text below and watch me change..."});
-let bindingInput = wrapperBindingSection.newWrap('input').setVal('Enter a Color name!').placehold('Type a color name...');
-boundText.bindToWrapper(bindingInput,'value','text')
-  .bindToWrapper(bindingInput,'value','style',(newVal: string)=>{boundText.style('color:' + newVal)});
+//#region #### Inter-Wrapper Binding ####
+let newBindSect = app.newWrap('section', { h: "<h1>Binding Between Wrappers</h1>" });
+let newInput = newBindSect.makeLabeledInput('binding-example', 'input', 'inside', { lbl: "Binding Target ➡", lblStyle: "margin-right:0.5em" });
+newInput.input.placehold("Type here!");
+let targetInput = newInput.input; //better name for below
+let bindGrid = newBindSect.newWrap('div', { s: "display:grid; column-gap: 10px; grid-template-columns:repeat(4,1fr)" })
+bindGrid.newWrap('h2', { t: "Default (text) Binding" })
+bindGrid.newWrap("p", { t: "Type above and watch me change", s: "grid-row-start:2" })
+  .bindTo(targetInput);
+bindGrid.newWrap('h2', { t: "Style Binding" });
+bindGrid.newWrap('div', { s: "grid-row-start:2" }) //container maintains place in grid for child
+  .newWrap('p', { t: "I'll set my style attribute to whatever you enter above \n (e.g. try 'font-family: courier; color: red')" })
+  .bindStyleTo(targetInput);
+bindGrid.newWrap('h2', { t: 'Value Binding' })
+bindGrid.newWrap('input').bindValueTo(targetInput).style('grid-row-start:2');
+bindGrid.newWrap('h2', { t: "Binding with Xfer Function" });
+let op = bindGrid.newWrap("p", { t: "I will be uppercase", s: "grid-row-start:2" });
+op.bindTo(targetInput, 'value', (nv) => {
+  op.text(`In uppercase: ${nv.toUpperCase()}`)
+})
+bindGrid.newWrap('h2', { t: 'Binding Breaking & Rebinding' });
+let breakable = newBindSect.newWrap('p').bindTextTo(targetInput);
+let breaker = newBindSect.newWrap('button', { t: "Break binding" });
+let rebinder = newBindSect.newWrap('button', { t: "Re-bind" });
+(<HTMLButtonElement>rebinder.element).disabled = true;
+breaker.onClick(() => {
+  breakable.getBindings().forEach(b => b.break());
+  (<HTMLButtonElement>rebinder.element).disabled = false;
+  (<HTMLButtonElement>breaker.element).disabled = true;
+});
+rebinder.onClick(() => {
+  breakable.bindTextTo(targetInput);
+  (<HTMLButtonElement>rebinder.element).disabled = true;
+  (<HTMLButtonElement>breaker.element).disabled = false;
+});
 //#endregion
-*/

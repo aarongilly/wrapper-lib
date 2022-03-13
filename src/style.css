@@ -26,3 +26,8 @@ section h2{
 .styled-text{
   font-style: oblique;
 }
+
+.explanatory{
+  font-style: oblique;
+  color: hsla(0, 0%, 49%, 0.774)
+}
