@@ -223,7 +223,7 @@ export class Wrapper extends Observable implements Observer { //implements Obser
     }
 
     bindTo(target: Observable, changeKey?: string, xferFunc?: Function) {
-        if(!xferFunc) xferFunc = (nv:any, key: string, self: this)=>{this.text(nv)}
+        if(!xferFunc) xferFunc = (nv:any)=>{this.text(nv)}
         if(!changeKey && target.constructor.name == "Wrapper") changeKey = 'value'; //default
         let binding = new Binding(this, target, changeKey, xferFunc);
         target.boundFrom.push(binding);
@@ -238,12 +238,12 @@ export class Wrapper extends Observable implements Observer { //implements Obser
     }
 
     bindStyleTo(target:Observable, changeKey?: string, xferFunc?: Function){
-        if(!xferFunc) xferFunc = (nv:any, key: string, self: this)=>{this.style(nv)}
+        if(!xferFunc) xferFunc = (nv:any)=>{this.style(nv)}
         return this.bindTo(target, changeKey, xferFunc);
     }
 
     bindValueTo(target:Observable, changeKey?: string, xferFunc?: Function){
-        if(!xferFunc) xferFunc = (nv:any, key: string, self: this)=>{this.setVal(nv)}
+        if(!xferFunc) xferFunc = (nv:any)=>{this.setVal(nv)}
         return this.bindTo(target, changeKey, xferFunc);
     }
 

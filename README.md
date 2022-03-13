@@ -6,10 +6,16 @@ I'm **100% Sure** there are plenty of other libraries out there that do what thi
 
 ## What It Is
 
-Wrapper is a class that *wraps* an HTML Element, allowing you to do things to that element using a (slightly) more concise syntax than plain vanilla JS would get you. 
+Wrapper is a class that *wraps* an HTML Element, allowing you to do things to that element using a (slightly) more concise syntax than plain vanilla JS would get you. Wrappers can function as both Observable and Obervers. The library also contains Observable and Observer base classes for use outside of the Wrapper context.
 
 It's primary purpose is for building out a UI in JavaScript without writing so much code. Compare these blocks of code that do the same thing.
 
+## DEV TODO 
+
+- [ ] Clean up JSDocs - especially in the new area
+- [ ] Decide if the 'self' stuff can go away
+- [ ] Figure out Array binding, for composite wrappers
+- [ ] Think about modals, maybe
 
 ### Basic 3 Part Example
 ```
@@ -37,10 +43,10 @@ let cont = document.createElement('section');
 document.body.appendChild(cont); //to host example
 //using a few Wrappers
 let myWrap = Wrapper.wrap(cont);
-myWrap.newWrap('h1', {text: "Hello Wrapper!"});
+myWrap.newWrap('h1', {t: "Hello Wrapper!"});
 let myBody = myWrap.newWrap('p',{id:'my-paragraph-2',style:'font-size:1.5em'})
 .text('Last time I checked, the time was: ' + new Date().toLocaleTimeString());
-myWrap.newWrap('button',{text: 'Check again'}).onEvent('click',()=>{
+myWrap.newWrap('button',{t: 'Check again'}).onClick(()=>{
   myBody.text(myBody.getText().substring(0, 35) + new Date().toLocaleTimeString()
 )});
 ```
