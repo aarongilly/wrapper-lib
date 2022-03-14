@@ -1,31 +1,234 @@
+
+export class Observable {
+    private obsVal: any;
+    public boundFrom: Binding[];
+    /**
+     * Observables hold a value and notify Observers when the value is set.
+     * They do this by maintaining a list of Bindings in which they are the 'to'
+     * object. Each time setVal is called they notify all subscribers in their 
+     * boundFrom list. setVal can be of any type. If a 'changeKey' is provided to
+     * setVal, the changeKey string will be treated as a path to a property in the
+     * obsVal object. E.G. setVal('hello','message.toWorld') would set the 
+     * 'toWorld' property within the 'message' property of the obsVal variable.
+     * @param initVal the initial value of the Observables obsVal property.
+     */
+    constructor(initVal: any) {
+        this.obsVal = initVal;
+        this.boundFrom = [];
+    }
+
+    /**
+     * Simple value getter
+     * @param changeKey optional dot-separated path to property. 
+     * Can reach nested properties by supplying a dot-delimited string of
+     * property names. E.G. 'outer.inner'.
+     * @returns the observed value
+     */
+    getVal(changeKey?: string) {
+        if (changeKey == undefined) return this.obsVal;
+        let pathParts = changeKey.split('.');
+        let target = this.obsVal;
+        while (pathParts.length > 1) {
+            let part = pathParts.shift();
+            target = target[part!];
+        }
+        return target[pathParts[0]];
+    }
+
+    /**
+     * Value setter, notifies subscribers of change
+     * @param newVal the new value for the observable
+     * @param changeKey dot-separated path to nested property
+     * Can reach nested properties by supplying a dot-delimited string of
+     * property names. E.G. 'outer.inner'.
+     * @returns the Observed value (obsVal) after the change
+     */
+    setVal(newVal: any, changeKey?: string) {
+        if (changeKey) {
+            let pathParts = changeKey.split('.');
+            let target = this.obsVal;
+            while (pathParts.length > 1) {
+                let part = pathParts.shift();
+                target = target[part!];
+            }
+            target[pathParts[0]] = newVal;
+        } else {
+            this.obsVal = newVal;
+        }
+        this.notifySubscribers(newVal, changeKey)//, this);
+        return this.obsVal;
+    }
+
+    /**
+     * Propogate out a request to handle change to every entry in the subscriber list
+     * @param newVal 
+     * @param changeKey 
+     */
+    notifySubscribers(newVal: any, changeKey?: string) {
+        this.boundFrom.forEach(b => {
+            if (b.to == this) {
+                b.handleChange(newVal, changeKey)
+            }
+        })
+    }
+}
+
+export class Observer {
+    public boundVal?: any;
+    public boundTo: Binding[]
+    /**
+     * Observers watch Observables and react to changes to their Observed Value.
+     * Observers themselves have a boundVal that will relate to the Observed Value
+     * according ot the xferFunction. If not supplied, the xferFunction by default
+     * will simply set boundVal equal to the observedVal. 
+     * @param initVal optional, the initial value for the Observer's boundVal property
+     */
+    constructor(initVal?: any) {
+        this.boundVal = initVal;
+        this.boundTo = [];
+    }
+
+    /**
+     * The main method for Observers, binds their boundVal to the Observable's
+     * obsVal using a xferFunction. By default the xferFunction 
+     * @param target the Observable to watch
+     * @param changeKey optional, if specified, only changes made to the 
+     * observable that include the same changeKey will result in changes
+     * to this.boundVal. This can make the Observer only watch for changes
+     * to specific parts of the Observable.
+     * @param xferFunc custom logic to apply when transferring the obsVal
+     * into the new value for boundVal. If this function returns a value, that
+     * is what boundVal will be set to.
+     * @returns this, for chaining
+     */
+    bindTo(target: Observable, changeKey?: string, xferFunc?: Function) {
+        let binding = new Binding(this, target, changeKey, xferFunc);
+        target.boundFrom.push(binding);
+        this.boundTo.push(binding);
+        return this;
+    }
+
+    /**
+     * Grab all the Bindings that are assocaited with this Observer
+     * @returns array of Bindings where this == binding.from
+     */
+    getBindings() {
+        return this.boundTo;
+    }
+
+    /**
+     * Breaks all existing bindings between this and the target Observer.
+     * If a changeKey is supplied, it will break only all Bindings wth that 
+     * changeKey.
+     * @param target 
+     * @param changeKey 
+     * @returns this, for chaining
+     */
+    breakBinding(target: Observable, changeKey?: string): Observer {
+        this.boundTo.forEach(b => {
+            if (b.to == target && b.changeKey == changeKey) {
+                b.break();
+            }
+        })
+        return this;
+    }
+}
+
+export class Binding {
+    public from: Observer;
+    public to: Observable;
+    public changeKey?: string;
+    public xferFunc: Function
+    /**
+     * Bindings represent a connection between an Observable and an Observer.
+     * They hold the xferFunction that changes the observable.obsVal into the 
+     * observer.boundVal. If they contain a changeKey, then only changes to
+     * the Observable with that key will cause the Observer to update.
+     * @param observer the Observer to bind
+     * @param boundTo the Observable to bind it to
+     * @param changeKey if !undefined, only changes with this key will 
+     * propagate to the Observer.
+     * @param xferFunc if !undefined, the xferFunction that will be applied
+     * to the new value of the Observable's obsVal to turn it into the new
+     * value of the Observer's boundVal. 
+     * If no xferFunc is supplied, by default the boundVal will be set equal to obsVal.
+     * If this function returns a non-null, non-undefined value, 
+     * that is the value that will be set. 
+     * You may also choose to **not** include a return and instead 
+     * handle the update logic entirely within your custom xferFunc.
+     */
+    constructor(observer: Observer, boundTo: Observable, changeKey?: string, xferFunc?: Function) {
+        this.from = observer;
+        this.to = boundTo;
+        this.changeKey = changeKey;
+        if (xferFunc) {
+            this.xferFunc = xferFunc;
+        } else {
+            if (changeKey) {
+                this.xferFunc = () => {
+                    let pathParts = changeKey.split('.');
+                    let target = this.to.getVal();
+                    pathParts.forEach(p => {
+                        if (target.hasOwnProperty(p)) {
+                            target = target[p]
+                        } else {
+                            console.warn(`
+                            Attempting to traverse bound path '${changeKey}' 
+                            failed at '${p}'`)
+                        }
+                    })
+                    this.from.boundVal = target;
+                };
+            } else {
+                this.xferFunc = () => {
+                    this.from.boundVal = this.to.getVal();
+                }
+            }
+        }
+    }
+
+    /**
+     * This is typically only called by an Observable's 'setVal' function.
+     * Maybe there's a use for calling it yourself outside of that context.
+     * @param newVal the new value to send to the Observer
+     * @param changeKey when supplied, this argument must match the value of
+     * this's changeKey value in order to propagate the change.
+     */
+    public handleChange(newVal: any, changeKey?: string){
+        if (changeKey == this.changeKey) {
+            let xferResult = this.xferFunc(newVal, changeKey)!;
+            if (xferResult != null && xferResult != undefined) {if (this.from.constructor.name == "Wrapper") {
+                    (<Wrapper>this.from).text(xferResult);
+                } else {
+                    this.from.boundVal = xferResult
+                }
+            }
+        }
+    }
+
+    /**
+     * Breaks the Binding and removes it from both the Observable and Observers
+     * respective lists of active bindings.
+     */
+    public break() {
+        this.from.boundTo = this.from.boundTo.filter(b => b != this);
+        this.to.boundFrom = this.to.boundFrom.filter(b => b != this);
+    }
+}
+
 /**
  * Options that Wrappers can be initialized with.
  */
 export interface WrapperOptions {
-    id?: string;
-    name?: string;
-    value?: string;
-    text?: string;
-    html?: string;
-    style?: string;
-    bind?: WrapperObservableListMember;
-    inputType?: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week"
-}
-
-export interface WrapperObservableListMember {
-    bindFeature: ObservableFeature;
-    toFeature: ObservableFeature;
-    ofWrapper: Wrapper;
-    xferFunc?: Function;
-}
-
-export interface WrapperlessObservableListMember {
-    xferFunc: Function;
-    sub: WrapperlessObserver;
-}
-
-export interface WrapperlessObserver {
-    handleChange: Function;
+    i?: string; //id
+    n?: string; //name attribute
+    v?: string; //value
+    t?: string; //innerText
+    c?: string //class
+    h?: string; //innerHTML
+    s?: string; //style attribute
+    b?: Observable; //bind (text) to
+    iT?: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week" //input type
 }
 
 export interface WrappedInputLabelPairOptions {
@@ -44,49 +247,230 @@ export type WrapperPosition = "inside" | "before" | "after"
 
 type HTMLElementsWithValue = HTMLButtonElement | HTMLInputElement | HTMLMeterElement | HTMLLIElement | HTMLOptionElement | HTMLProgressElement | HTMLParamElement;
 
-export class Wrapper {
+export class Wrapper extends Observable implements Observer { //implements Observable, Observer {
     public element: HTMLElement;
-    public subscribers: WrapperObservableListMember[];
+    public parent: Wrapper | undefined;
+    public children: Wrapper[];
+    public boundFrom: Binding[];
+    public boundTo: Binding[];
+    public boundVal: any;
+    /**
+     * Wrappers 'wrap' HTMLElements and are utilized to make changes to them.
+     * Wrappers function as both Observables and Observers. They can be bound to 
+     * Observables or other Wrappers or bound from Observers or other Wrappers.
+     * @param tag the tag of the element to create (if existingElement == undefined)
+     * @param existingElement the element to wrap. If undefined, an element will be 
+     * create on the document object, BUT WILL NOT BE VISIBLE UNTIL YOU APPEND IT TO SOMETHING
+     * @param intializers a map of {@link WrapperOptions} to initialize the Wrapper
+     * with. Can do things like setting the Wrapper's innerText with {'t':'my text'}
+     */
     constructor(tag?: keyof HTMLElementTagNameMap, existingElement?: HTMLElement, intializers?: WrapperOptions) {
-        this.subscribers = [];
+        super("");
+        this.boundFrom = [];
+        this.boundTo = [];
+        this.children = [];
         if (existingElement) {
             this.element = existingElement;
         } else {
             this.element = document.createElement(tag!)
         }
         //auto-call notify subscribers if inputs change
-        if (this.element.tagName === "INPUT") this.onEvent('input', this.notifySubscribers.bind(this));
-        if (this.element.tagName === "SELECT") this.onEvent('change', this.notifySubscribers.bind(this));
-        if (this.element.tagName === "TEXTAREA") this.onEvent('input', this.notifySubscribers.bind(this));
+        if (this.element.tagName === "INPUT") this.onEvent('input', () => { this.notifySubscribers.bind(this)(this.getVal(), 'value') });
+        if (this.element.tagName === "SELECT") this.onEvent('change', () => { this.notifySubscribers.bind(this)(this.getVal(), 'value') });
+        if (this.element.tagName === "TEXTAREA") this.onEvent('input', () => { this.notifySubscribers.bind(this)(this.getVal(), 'value') });
         if (intializers) {
-            if (intializers.id) this.element.id = intializers.id!;
-            if (intializers.name) this.element.setAttribute('name', intializers.name!);
-            if (intializers.value) {
+            if (intializers.i) this.element.id = intializers.i!;
+            if (intializers.n) this.element.setAttribute('name', intializers.n!);
+            if (intializers.v) {
                 if (this.element.hasOwnProperty('value')) {
-                    (<HTMLElementsWithValue>this.element).value = intializers.value!;
+                    (<HTMLElementsWithValue>this.element).value = intializers.v!;
                 } else {
                     throw new Error("attempted to set value on a tag that doesn't support that")
                 }
             }
-            if (intializers.text != undefined) this.element.innerText = intializers.text!;
-            if (intializers.html != undefined) this.element.innerHTML = intializers.html!;
-            if (intializers.style) this.element.setAttribute('style', intializers.style!);
-            if (intializers.inputType) this.element.setAttribute('type', intializers.inputType);
-            if (intializers.bind) {
-                let sub: WrapperObservableListMember = {
-                    bindFeature: intializers.bind.bindFeature,
-                    toFeature: intializers.bind.toFeature,
-                    ofWrapper: this,
-                    xferFunc: intializers.bind.xferFunc
-                }
-                intializers.bind.ofWrapper.addSubscriber(sub);//this feels wrong
+            if (intializers.t != undefined) this.element.innerText = intializers.t!;
+            if (intializers.h != undefined) this.element.innerHTML = intializers.h!;
+            if (intializers.c != undefined) this.class(intializers.c!);
+            if (intializers.s) this.element.setAttribute('style', intializers.s!);
+            if (intializers.iT) this.element.setAttribute('type', intializers.iT);
+            if (intializers.b) {
+                this.bindTo(intializers.b, undefined, (nv: string) => {
+                    this.text(nv);
+                })
             }
         }
     }
 
     /**
+     * Notifies the subscribers in the Wrappers boundFrom list of changes.
+     * Typically only called internally by setter methods in Wrapper.
+     * @param newVal the new value to notify the Observers about
+     * @param changeKey a key for the change describing what part 
+     * of the Wrapper changed.
+     */
+    notifySubscribers(newVal: any, changeKey?: string): void {
+        this.boundFrom.forEach(b => {
+            if (b.to == this) {
+                b.handleChange(newVal, changeKey)
+            }
+        })
+    }
+
+    /**
+     * Binds the innerText of the Wrapper to the target.
+     * @param target the Observable to bind to
+     * @param changeKey optional, a key for the change to the Observable
+     * that this Wrapper should be notified about. If supplied, changes to 
+     * the Observable with different changeKeys will not notify this Wrapper.
+     * @param xferFunc if !undefined, the xferFunction that will be applied
+     * to the new value of the Observable's obsVal to turn it into the new
+     * value of the Observer's boundVal. 
+     * If no xferFunc is supplied, by default the boundVal will be set equal to obsVal.
+     * If this function returns a non-null, non-undefined value, 
+     * that is the value that will be set. 
+     * You may also choose to **not** include a return and instead 
+     * handle the update logic entirely within your custom xferFunc.
+     * @returns this, for chaining
+     */
+    bindTo(target: Observable, changeKey?: string, xferFunc?: Function) {
+        if (!xferFunc) xferFunc = (nv: any) => { this.text(nv) }
+        if (!changeKey && target.constructor.name == "Wrapper") changeKey = 'value'; //default
+        let binding = new Binding(this, target, changeKey, xferFunc);
+        target.boundFrom.push(binding);
+        this.boundTo.push(binding);
+        return this;
+    }
+
+    /**
+     * Simple alias for for bindTo'.
+     * Binds the innerText of the Wrapper to the target.
+     * @param target the Observable to bind to
+     * @param changeKey optional, a key for the change to the Observable
+     * that this Wrapper should be notified about. If supplied, changes to 
+     * the Observable with different changeKeys will not notify this Wrapper.
+     * @param xferFunc if !undefined, the xferFunction that will be applied
+     * to the new value of the Observable's obsVal to turn it into the new
+     * value of the Observer's boundVal. 
+     * If no xferFunc is supplied, by default the boundVal will be set equal to obsVal.
+     * If this function returns a non-null, non-undefined value, 
+     * that is the value that will be set. 
+     * You may also choose to **not** include a return and instead 
+     * handle the update logic entirely within your custom xferFunc.
+     * @returns this, for chaining
+     */
+    bindTextTo(target: Observable, changeKey?: string, xferFunc?: Function) {
+        this.text(JSON.stringify(target.getVal())); //seems to work?
+        if (typeof target.getVal() == 'string') this.text(target.getVal()); //prevents quotes
+        if(target.constructor.name == "Wrapper" && changeKey == 'text') this.text((<Wrapper> target).getText())
+        if(target.constructor.name == "Wrapper" && changeKey == 'style') this.text((<Wrapper> target).getStyle())
+        return this.bindTo(target, changeKey, xferFunc);
+    }
+
+    /**
+     * Binds the styleAttribute of the Wrapper to the target.
+     * @param target the Observable to bind to
+     * @param changeKey optional, a key for the change to the Observable
+     * that this Wrapper should be notified about. If supplied, changes to 
+     * the Observable with different changeKeys will not notify this Wrapper.
+     * @param xferFunc if !undefined, the xferFunction that will be applied
+     * to the new value of the Observable's obsVal to turn it into the new
+     * value of the Observer's boundVal. 
+     * If no xferFunc is supplied, by default the boundVal will be set equal to obsVal.
+     * If this function returns a non-null, non-undefined value, 
+     * that is the value that will be set. 
+     * You may also choose to **not** include a return and instead 
+     * handle the update logic entirely within your custom xferFunc.
+     * @returns this, for chaining
+     */
+    bindStyleTo(target: Observable, changeKey?: string, xferFunc?: Function) {
+        if (!xferFunc) xferFunc = (nv: any) => { this.style(nv) }
+        return this.bindTo(target, changeKey, xferFunc);
+    }
+
+    /**
+     * Binds the value attribute of the Wrapper to the target.
+     * @param target the Observable to bind to
+     * @param changeKey optional, a key for the change to the Observable
+     * that this Wrapper should be notified about. If supplied, changes to 
+     * the Observable with different changeKeys will not notify this Wrapper.
+     * @param xferFunc if !undefined, the xferFunction that will be applied
+     * to the new value of the Observable's obsVal to turn it into the new
+     * value of the Observer's boundVal. 
+     * If no xferFunc is supplied, by default the boundVal will be set equal to obsVal.
+     * If this function returns a non-null, non-undefined value, 
+     * that is the value that will be set. 
+     * You may also choose to **not** include a return and instead 
+     * handle the update logic entirely within your custom xferFunc.
+     * @returns this, for chaining
+     */
+    bindValueTo(target: Observable, changeKey?: string, xferFunc?: Function) {
+        if (!xferFunc) xferFunc = (nv: any) => { this.setVal(nv) }
+        return this.bindTo(target, changeKey, xferFunc);
+    }
+
+    /**
+     * Create a set of <li> Wrappers for each element in the target's 
+     * obsVal (if the obsVal is an array). Should be called on a Wrapper
+     * that's wrapping a <ul> or <li> element.
+     * @param target Observable with an obsVal that's an array.
+     * Works best if it's an array of Strings or numbers.
+     * @param changeKey optional, a key for the change to the Observable
+     * that this Wrapper should be notified about. If supplied, changes to 
+     * the Observable with different changeKeys will not notify this Wrapper.
+     */
+    bindListTo(target: Observable, changeKey?: string) {
+        this.bindTo(target,changeKey,(nv:Array<string>)=>{
+            this.html(''); //nuke old array
+            this.listContent(nv);
+          }).listContent(target.getVal()); //bindTo array doesn't support grabbing intial value
+    }
+
+    /**
+     * Create a set of <option> Wrappers for each element in the target's 
+     * obsVal (if the obsVal is an array). Should be called on a Wrapper 
+     * that is wrapping a <select> element.
+     * @param target Observable with an obsVal that's an array.
+     * Works best if it's an array of Strings or numbers.
+     * @param changeKey optional, a key for the change to the Observable
+     * that this Wrapper should be notified about. If supplied, changes to 
+     * the Observable with different changeKeys will not notify this Wrapper.
+     */
+     bindSelectTo(target: Observable, changeKey?: string) {
+        this.bindTo(target,changeKey,(nv:Array<string>)=>{
+            this.html(''); //nuke old array
+            this.selectContent(nv);
+          }).selectContent(target.getVal()); //bindTo array doesn't support grabbing intial value
+    }
+
+     /**
+     * Grab all the Bindings that are assocaited with this Observer
+     * @returns array of Bindings where this == binding.from
+     */
+      getBindings() {
+        return this.boundTo;
+    }
+
+    /**
+     * Breaks all existing bindings between this and the target Observer.
+     * If a changeKey is supplied, it will break only all Bindings wth that 
+     * changeKey.
+     * @param target 
+     * @param changeKey 
+     * @returns this, for chaining
+     */
+    breakBinding(target: Observable, changeKey?: string): Observer {
+        this.boundTo.forEach(b => {
+            if (b.to == target && b.changeKey == changeKey) {
+                b.break();
+            }
+        })
+        return this;
+    }
+
+    /**
      * Wraps an existing HTML Element with a Wrapper
      * @param element the element to wrap
+     * @param initializers a map of {@link WrapperOptions} to initialize the Wrapper with.
      * @returns the new wrapper, for chaining
      */
     static wrap(element: HTMLElement, initializers?: WrapperOptions): Wrapper {
@@ -103,128 +487,14 @@ export class Wrapper {
      */
     newWrap(tag: keyof HTMLElementTagNameMap, initializers?: WrapperOptions, location: WrapperPosition = 'inside'): Wrapper {
         let nW = new Wrapper(tag, undefined, initializers);
-        if (location === 'inside') this.element.appendChild(nW.element);
+        if (location === 'inside') {
+            this.element.appendChild(nW.element);
+            this.children.push(nW);
+            nW.parent = this;
+        }
         if (location === 'after') this.element.after(nW.element);
         if (location === 'before') this.element.before(nW.element);
         return nW;
-    }
-
-    /**
-     * Binds the Wrapper to a WrapperlessObservable instance. If you want to bind between
-     * wrappers, use the bindToWrapper method.
-     * @param target observerable to bind to
-     * @param boundFeature feature on this Wrapper to change, not used if xferFunc is supplied
-     * @param xferFunc optional, what to do with the new value. If this function returns a value,
-     * it will be applied to the `boundFeature`.
-     */
-    bindTo(target: WrapperlessObservable, boundFeature?: ObservableFeature, xferFunc?: Function) {
-        if (xferFunc != undefined) {
-            target.addSubscriber(this, xferFunc);
-        } else {
-            if (boundFeature == undefined) throw new Error("No bound feature or xferFunc included.");
-            if (boundFeature == 'text') {
-                target.addSubscriber(this, (nv: string) => this.text(nv));
-                this.text(target.getVal().toString())
-            }
-            if (boundFeature == 'value'){
-                target.addSubscriber(this, (nv: string) => this.setVal(nv));
-                this.setVal(target.getVal().toString());
-            }
-            if (boundFeature == 'style'){
-                target.addSubscriber(this, (nv: string) => this.style(nv));
-                this.setStyle(target.getVal().toString());
-            }
-        }
-    }
-
-    /**
-     * Bind this wrapper's text/style/value to the text/style/value of the targetWrapper
-     * @param targetWrapper Wrapper to bind to
-     * @param targetFeature The feature you care about on the Wrapper you're subscribing 
-     * @param thisFeature Which part of this Wrapper should be updated
-     * @param using optional transfer function, default: text for non-inputs, otherwise value
-     * @returns this, for chaining
-     */
-    bindToWrapper(targetWrapper: Wrapper, targetFeature: ObservableFeature, thisFeature: ObservableFeature, using?: Function): Wrapper {
-        let sub: WrapperObservableListMember = {
-            bindFeature: targetFeature,
-            toFeature: thisFeature,
-            ofWrapper: this,
-            xferFunc: using
-        }
-        targetWrapper.addSubscriber(sub);
-        //initilize bound value to whatever it is now
-        let currentVal = targetWrapper.getText();
-        if (sub.bindFeature === 'style' && targetWrapper.getStyle() != null) currentVal = targetWrapper.getStyle()!;
-        if (sub.bindFeature === 'value') currentVal = targetWrapper.getVal().toString();
-        this.handleChange(currentVal, sub)
-        return this
-    }
-
-    /**
-     * Propogate out a request to handle change to every entry in the subscriber list
-     * @returns this, for chaining
-     */
-    notifySubscribers(): Wrapper {
-        // console.warn
-        this.subscribers.forEach(sub => {
-            let newVal = this.getText();
-            if (sub.bindFeature == 'value') newVal = this.getVal().toString();
-            if (sub.bindFeature == 'style') newVal = this.getStyle()!;
-            sub.ofWrapper.handleChange(newVal, sub)
-        })
-        return this;
-    }
-
-    /**
-     * Updates this wrapper with the new value from the WrapperObservable that called it,
-     * in accordance with the terms of the subscription.
-     * @param newValue the new value from the thing
-     * @param subscription the subscription itself, or the function to run
-     */
-    handleChange(newValue: string, subscription: WrapperObservableListMember | Function): void {
-        if (typeof subscription === 'function') {
-            subscription(newValue);
-        } else {
-            if (subscription.xferFunc) {
-                let result = subscription.xferFunc(newValue);
-                if(result){
-                    if (subscription.toFeature === 'text') this.text(result.toString());
-                    if (subscription.toFeature === 'style') this.style(result.toString());
-                    if (subscription.toFeature === 'value') this.setVal(result.toString());    
-                }
-            } else {
-                if (subscription.toFeature === 'text') this.text(newValue);
-                if (subscription.toFeature === 'style') this.style(newValue);
-                if (subscription.toFeature === 'value') this.setVal(newValue);
-            }
-        }
-    }
-
-    /**
-     * Adds a new subscriber, which contains a subscribing wrapper and
-     * details about how it should be updated on changes to this.
-     * @param newSub subscribing wrapper to add
-     * @returns this, for chaining
-     */
-    addSubscriber(newSub: WrapperObservableListMember): Wrapper {
-        this.subscribers.push(newSub);
-        return this;
-    }
-
-    //removeSubscriber //todo - this
-    removeSubscriber(subbedWrapper: Wrapper): Wrapper {
-        this.subscribers = this.subscribers.filter(sub => sub.ofWrapper != subbedWrapper)
-        return this;
-    }
-
-    /**
-     * Removes all subscribers from the list.
-     * @returns this, for chaining
-     */
-    purgeSubscribers() {
-        this.subscribers = [];
-        return this
     }
 
     /**
@@ -234,7 +504,7 @@ export class Wrapper {
      */
     text(text: string): Wrapper {
         this.element.innerText = text;
-        this.subscribers.forEach(sub => { if (sub.bindFeature == 'text') sub.ofWrapper.handleChange(text, sub) });
+        this.notifySubscribers(text,'text');
         return this
     }
 
@@ -245,7 +515,7 @@ export class Wrapper {
      * @returns this, for chaining
      */
     attr(attribute: string, value: string): Wrapper {
-        this.element.setAttribute(attribute, value)
+        this.element.setAttribute(attribute, value);
         return this;
     }
 
@@ -272,8 +542,20 @@ export class Wrapper {
             if (style.charAt(style.length - 1) != ";") style = style + "; "
         }
         this.element.setAttribute('style', style + styleString);
-        this.subscribers.forEach(sub => { if (sub.bindFeature === 'style') sub.ofWrapper.handleChange(styleString, sub) });
+        this.notifySubscribers(this.getStyle(),'style');
         return this
+    }
+
+    /**
+     * Sets the classList of the Wrapped Element
+     * @param classText a single class name or array of class names to apply
+     * @returns this, for chaining
+     */
+    class(classText: string | string[]) {
+        if (typeof classText === "string") classText = [classText];
+        let classes = this.element.classList;
+        classes.add(classText.join(" "));
+        return this;
     }
 
     /**
@@ -301,7 +583,7 @@ export class Wrapper {
      * @param inputType a valid input type string to apply to the input element
      * @returns this, for chaining
      */
-    inputType(inputType: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week"): Wrapper{
+    inputType(inputType: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week"): Wrapper {
         this.element.setAttribute('type', inputType);
         return this
     }
@@ -311,6 +593,17 @@ export class Wrapper {
      */
     kill() {
         this.element.remove();
+    }
+
+    /**
+     * Calls "remove" on the classList of the wrapped element
+     * @param className class to remove from the element
+     * @returns this, for chaining
+     */
+    removeClass(className: string): Wrapper {
+        let classes = this.element.classList;
+        classes.remove(className);
+        return this;
     }
 
     /**
@@ -349,8 +642,10 @@ export class Wrapper {
      * Returns the style string of a given attribute on the wrapped element
      * @returns the style string of attribute on the element, or null if no attribute exists
      */
-    getStyle(): string | null {
-        return this.element.getAttribute('style');
+    getStyle(): string {
+        let style = this.element.getAttribute('style');
+        if(style == null) style = ''
+        return style
     }
 
     /**
@@ -396,7 +691,7 @@ export class Wrapper {
     setVal(val: string) {
         (<HTMLInputElement | HTMLParamElement | HTMLButtonElement |
             HTMLOptionElement | HTMLLIElement>this.element).value = val;
-        this.subscribers.forEach(sub => { if (sub.bindFeature === "value") sub.ofWrapper.handleChange(val, sub) });
+        this.notifySubscribers(val,'value');
         return this;
     }
 
@@ -463,11 +758,28 @@ export class Wrapper {
         return this;
     }
 
+    /**
+     * Creates a new change event listener on the wrapped element
+     * @param fun the function to run on changes;
+     * @returns this, for chaining
+     */
+    onEnterKey(fun: Function): Wrapper {
+        this.element.addEventListener("keyup", function (event: KeyboardEvent) {
+            if (event.code === "Enter") {
+                event.preventDefault();
+                fun(event);
+            }
+        });
+        return this;
+    }
+
+
     ///#region #### Composite Wrappers ####
 
     /**
-     * For use with <ol> or <ul> elements
-     * Creates a series of <li> elements for elements in an array
+     * For use with <ol> or <ul> elements. EXPECTS TO BE PUT INSIDE 
+     * AN EXISTING <ol> OR <uL> ELEMENT.
+     *  Creates a series of <li> elements for elements in an array
      * @param textList the visible text to create each element for
      * @param idList optional IDs to include
      * @returns this, for chaining
@@ -483,7 +795,7 @@ export class Wrapper {
                 throw new Error('textList and idList not the same length');
             }
             textList.forEach((text, ind) => {
-                this.newWrap('li', { 'id': idList[ind] }).text(text);
+                this.newWrap('li', { 'i': idList[ind] }).text(text);
             })
         } else {
             textList.forEach((text) => {
@@ -494,7 +806,8 @@ export class Wrapper {
     }
 
     /**
-     * For use with <select> elements
+     * For use with <select> elements. EXPECTS TO BE PUT INSIDE
+     * AN EXISTING <select> ELEMENT.
      * Creates a list of <option> elements inside the <select>
      * with the given display text and value text
      * @param textList 
@@ -514,7 +827,7 @@ export class Wrapper {
                 throw new Error('textList and idList not the same length');
             }
             textList.forEach((text, ind) => {
-                this.newWrap('option', { id: idList[ind] }).text(text).setVal(valList![ind]);
+                this.newWrap('option', { i: idList[ind] }).text(text).setVal(valList![ind]);
             })
         } else {
             textList.forEach((text, ind) => {
@@ -540,113 +853,24 @@ export class Wrapper {
     }
 }
 
-export class WrapperlessObservable {
-    private value: string | number | boolean;
-    subscribers: WrapperlessObservableListMember[]
-    constructor(initVal: string | number | boolean) {
-        this.value = initVal;
-        this.subscribers = [];
-    }
-
-    /**
-     * Simple value getter
-     * @returns the observed value
-     */
-    getVal() {
-        return this.value;
-    }
-
-    /**
-     * Value setter, notifies subscribers of change
-     * @param newValue the new value for the observable
-     */
-    setVal(newValue: string | number | boolean) {
-        this.value = newValue;
-        this.notifySubscribers();
-    }
-
-    addSubscriber(newSub: WrapperlessObserver, xferFunc: Function) {
-        this.subscribers.push({ sub: newSub, xferFunc: xferFunc })
-    }
-
-    /**
-     * Propogate out a request to handle change to every entry in the subscriber list
-     * @returns this, for chaining
-     */
-    notifySubscribers() {
-        this.subscribers.forEach(m => {
-            m.sub.handleChange(this.value, m.xferFunc)
-        })
-    }
-}
-
-export class Observer implements WrapperlessObserver {
-    value: string | number | boolean
-    constructor(init: string | number | boolean) {
-        this.value = init
-    }
-
-    /**
-        * Binds the Wrapper to a WrapperlessObservable instance. If you want to bind between
-        * wrappers, use the bindToWrapper method.
-        * @param target observerable to bind to
-        * @param boundFeature feature on this Wrapper to change, not used if xferFunc is supplied
-        * @param xferFunc optional, what to do with the new value, overrides boundFeature
-        * @returns this, for chaining
-        */
-    bindTo(target: WrapperlessObservable, xferFunc?: Function) {
-        if (xferFunc != undefined) {
-            target.addSubscriber(this, xferFunc);
-        } else {
-            target.addSubscriber(this, (nv: string | number | boolean) => { this.value = nv });
-        }
-        return this;
-    }
-
-    /**
-     * Bind this wrapper's text/style/value to the text/style/value of the targetWrapper
-     * @param targetWrapper Wrapper to bind to
-     * @param targetFeature The feature you care about on the Wrapper you're subscribing 
-     * @param thisFeature Which part of this Wrapper should be updated
-     * @param using optional transfer function, default: text for non-inputs, otherwise value
-     * @returns this, for chaining
-     */
-    bindToWrapper(targetWrapper: Wrapper, targetFeature: ObservableFeature, using?: Function): Observer {
-        if (using == undefined) using = (nv: string | number | boolean) => { return nv };
-        let sub: WrapperObservableListMember = {
-            toFeature: 'text',
-            bindFeature: targetFeature,
-            ofWrapper: targetWrapper, //hack - this isn't used in this context, but must exist
-            xferFunc: using
-        }
-        targetWrapper.addSubscriber(sub);
-        //initilize bound value to whatever it is now
-        let currentVal: string | number | boolean = targetWrapper.getText();
-        if (sub.bindFeature === 'style' && targetWrapper.getStyle() != null) currentVal = targetWrapper.getStyle()!;
-        if (sub.bindFeature === 'value') currentVal = targetWrapper.getVal();
-        this.handleChange(currentVal, using)
-        return this
-    }
-
-    /**
-     * Called by Observables when they are triggered by changes
-     * @param newVal the value to set
-     */
-    handleChange(newVal: string | number | boolean, doFun: Function) {
-        this.value = doFun(newVal);
-    }
-}
-
 export class WrappedInputLabelPair extends Wrapper {
     public container: HTMLElement;
     public label: Wrapper;
     public input: Wrapper;
+    /**
+     * Creates 3 Wrappers. An outer, containing Wrapper (div) with an input Wrapper
+     * and a label Wrapper inside it. The input is bound to the container by the inputId
+     * @param container Where to put the WrappedInputLabelPair
+     * @param inputId the id of the input element, used in the 'for' property of the label
+     * @param inputTag the type of input
+     * @param options a map of {@link WrappedInputLabelPairOptions}
+     */
     constructor(container: HTMLElement, inputId: string, inputTag: "input" | "textarea" = 'input', options?: WrappedInputLabelPairOptions) {
         super('div', container);
         this.container = this.element;
         this.style('display:flex');
         this.label = this.newWrap('label').attr('for', inputId).text('Input');
-        this.input = this.newWrap(inputTag, { id: inputId });
+        this.input = this.newWrap(inputTag, { i: inputId });
         if (options) {
             if (options.contStyle) this.style(options.contStyle!);
             if (options.inputStyle) this.input.style(options.inputStyle);
@@ -663,4 +887,10 @@ export class WrappedInputLabelPair extends Wrapper {
     }
 }
 
+/*
+export class WrappedModal extends Wrapper{
+    ... modals? Very very useful.
+    https://www.w3schools.com/howto/howto_css_modals.asp
+}
+*/
 //TODO - any other composites?

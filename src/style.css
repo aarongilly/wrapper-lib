@@ -22,3 +22,12 @@ section h1{
 section h2{
   font-size: 1.25em;
 }
+
+.styled-text{
+  font-style: oblique;
+}
+
+.explanatory{
+  font-style: oblique;
+  color: hsla(0, 0%, 49%, 0.774)
+}
