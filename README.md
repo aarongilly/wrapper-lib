@@ -12,10 +12,9 @@ It's primary purpose is for building out a UI in JavaScript without writing so m
 
 ## DEV TODO 
 
-- [ ] Clean up JSDocs - especially in the new area
-- [ ] Decide if the 'self' stuff can go away
 - [ ] Figure out Array binding, for composite wrappers
 - [ ] Think about modals, maybe
+- [ ] Make static working copy available on glitch, & my website
 
 ### Basic 3 Part Example
 ```

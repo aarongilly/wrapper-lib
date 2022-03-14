@@ -1,8 +1,8 @@
 import './style.css'
-import { Observer, Wrapper, Observable } from '../lib/wrapper-lib'
+import { Observer, Wrapper, Observable, Binding } from '../lib/wrapper-lib'
 
 const app = Wrapper.wrap(document.querySelector<HTMLDivElement>('#app')!);
-app.newWrap('h1', { t: 'Wrapper Library Test Page' });
+app.newWrap('h1', { t: 'Wrapper Library Demo Page' });
 
 //#region #### Simple Examples ####
 let simpleSection = app.newWrap('section', { h: '<h1>Simple Examples</h1>' });
@@ -139,4 +139,12 @@ rebinder.onClick(() => {
   (<HTMLButtonElement>rebinder.element).disabled = true;
   (<HTMLButtonElement>breaker.element).disabled = false;
 });
+let chainGang = newBindSect.newWrap('h2',{t:"Wrapper Binding Chain"})
+  .newWrap('div',undefined,'after');
+  chainGang.newWrap('p',{t:"(bound to target above)"});
+let one = chainGang.newWrap('p').bindTextTo(targetInput)
+chainGang.newWrap('p',{t:"(👇 bound to 👆)"});
+let two = chainGang.newWrap('p').bindTextTo(one,'text');
+chainGang.newWrap('p',{t:"(👇 bound to 👆)"});
+chainGang.newWrap('p').bindTextTo(two,'text');
 //#endregion
