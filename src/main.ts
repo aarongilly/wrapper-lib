@@ -44,11 +44,14 @@ datePair.bindTo(checkPair.input, 'value', (v) => { //neat binding example
 //#region #### Binding with Variables Section ####
 let bSect = app.newWrap('section', { h: '<h1>Binding with Observables</h1>' });
 bSect.newWrap('p', {
-  t: `In this library there are Observables, Observers, and Wrappers (which functions as both Obserables and Observers). 
-  This section shows 3 different Observables, one with a primative value, one with a simple object property, one with a nested property`,
+  t: `In this library there are Observables, Observers, and Wrappers (which functions as both Obserables and Observers)`,
   c: 'explanatory'
 })
 bSect.newWrap('h2', { t: "Observers Bound to Observables" });
+bSect.newWrap('p',{c:'explanatory'}).text(`This section contains 3 different Observers bound to 3 different Observables
+  - one with a primative value, illustrating the simplest case
+  - one with a simple object property, illustrating the use of changeKey ('boundProperty') to select a property to observe
+  - one with a nested property, illustrating the use of changeKey ('outer.inner') to identify the nested propety`)
 let primativeObs = new Observable(0);
 let pWatcher = new Observer().bindTo(primativeObs);
 let objectObs = new Observable({ boundProperty: 0 });
@@ -103,7 +106,7 @@ flexCont.newWrap('div', { s: 'display:flex' })
   .bindTextTo(nestedObs, 'outer.inner', () => JSON.stringify(nestedObs.getVal())).parent
   .newWrap('button', { s: "width: 100%", t: "Increment Nested Object Property" }).onClick(() => nestedObs.setVal(nestedObs.getVal('outer.inner') + 1, 'outer.inner'));
 
-bSect.newWrap('h2').text("Observing an Array");
+bSect.newWrap('h2').text("Wrapper Observing an Array");
 let obsList = new Observable(['1']);
 bSect.newWrap('ul').bindListTo(obsList, undefined);
 bSect.newWrap('button', { t: "Add Element to Array" }).onClick(() => obsList.setVal([...obsList.getVal(), obsList.getVal().length + 1]));
