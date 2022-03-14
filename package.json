@@ -1,6 +1,6 @@
 {
   "name": "wrapper-lib",
-  "version": "0.2.2",
+  "version": "1.0.0",
   "files": ["/dist"],
   "main": "./dist/wrapper-lib.js",
   "module": "./dist/wrapper-lib.js",
