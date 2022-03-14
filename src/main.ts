@@ -36,15 +36,16 @@ let grid = compositeSection.newWrap('div').style('display: grid; grid-template-c
 let checkPair = grid.makeLabeledInput('check-input', 'input', 'inside', { inputType: 'checkbox', lbl: "Show Date Example, too?" });
 (<HTMLInputElement>checkPair.input.element).checked = true;
 let datePair = grid.makeLabeledInput('date-input', undefined, undefined, { inputType: 'date', lbl: "Date Input", lblStyle: "margin-right: 0.5em" });
-datePair.bindTo(checkPair.input,'value',(v)=>{ //neat binding example
-  datePair.style( v ? 'display:flex' : 'display:none')
+datePair.bindTo(checkPair.input, 'value', (v) => { //neat binding example
+  datePair.style(v ? 'display:flex' : 'display:none')
 })
 //#endregion
 
 //#region #### Binding with Variables Section ####
 let bSect = app.newWrap('section', { h: '<h1>Binding with Observables</h1>' });
 bSect.newWrap('p', {
-  t: `In this library there are Observables, Observers, and Wrappers (which functions as both Obserables and Observers)`,
+  t: `In this library there are Observables, Observers, and Wrappers (which functions as both Obserables and Observers). 
+  This section shows 3 different Observables, one with a primative value, one with a simple object property, one with a nested property`,
   c: 'explanatory'
 })
 bSect.newWrap('h2', { t: "Observers Bound to Observables" });
@@ -87,12 +88,12 @@ flexCont.newWrap('div', { s: 'display:flex' })
   .newWrap('div', { s: "border:solid; padding:0.5em" })
   .newWrap('div', { t: "Object Property", s: "margin-top:0.25em" }).parent
   .newWrap('p', { s: "margin: 0.25em; font-size: 1.5em" })
-  .bindTextTo(objectObs, 'boundProperty', () => JSON.stringify(objectObs.getVal(),null,2)).parent
+  .bindTextTo(objectObs, 'boundProperty', () => JSON.stringify(objectObs.getVal(), null, 2)).parent
   .newWrap('button', { s: "width: 100%", t: "Increment Bound Property" }).onClick(() => objectObs.setVal(objectObs.getVal('boundProperty') + 1, 'boundProperty')).parent
-  .newWrap('button', { 
-    s: "width: 100%; margin-top:0.25em", 
-    t: "Set a Different Property" 
-  }).onClick(() => 
+  .newWrap('button', {
+    s: "width: 100%; margin-top:0.25em",
+    t: "Set a Different Property"
+  }).onClick(() =>
     objectObs.setVal(`Setting this won't trigger the observable`, 'unboundProperty'));
 
 flexCont.newWrap('div', { s: 'display:flex' })
@@ -101,11 +102,16 @@ flexCont.newWrap('div', { s: 'display:flex' })
   .newWrap('p', { s: "text-align: center; margin: 0.25em; font-size: 1.5em" })
   .bindTextTo(nestedObs, 'outer.inner', () => JSON.stringify(nestedObs.getVal())).parent
   .newWrap('button', { s: "width: 100%", t: "Increment Nested Object Property" }).onClick(() => nestedObs.setVal(nestedObs.getVal('outer.inner') + 1, 'outer.inner'));
+
+bSect.newWrap('h2').text("Observing an Array");
+let obsList = new Observable(['1']);
+bSect.newWrap('ul').bindListTo(obsList, undefined);
+bSect.newWrap('button', { t: "Add Element to Array" }).onClick(() => obsList.setVal([...obsList.getVal(), obsList.getVal().length + 1]));
 //#endregion
 
 //#region #### Inter-Wrapper Binding ####
 let newBindSect = app.newWrap('section', { h: "<h1>Binding Between Wrappers</h1>" });
-newBindSect.newWrap('p',{c:"explanatory",t:"Wrappers function as Observables and Observers - thus they can be bound directly to one-another"})
+newBindSect.newWrap('p', { c: "explanatory", t: "Wrappers function as Observables and Observers - thus they can be bound directly to one-another" })
 let newInput = newBindSect.makeLabeledInput('binding-example', 'input', 'inside', { lbl: "Binding Target ➡", lblStyle: "margin-right:0.5em" });
 newInput.input.placehold("Type here!");
 let targetInput = newInput.input; //better name for below
@@ -118,7 +124,7 @@ bindGrid.newWrap('div', { s: "grid-row-start:2" }) //container maintains place i
   .newWrap('p', { t: "I'll set my style attribute to whatever you enter above \n (e.g. try 'font-family: courier; color: red')" })
   .bindStyleTo(targetInput);
 bindGrid.newWrap('h2', { t: 'Value Binding' });
-(<HTMLInputElement> bindGrid.newWrap('input').bindValueTo(targetInput).style('grid-row-start:2').element).disabled = true;
+(<HTMLInputElement>bindGrid.newWrap('input').bindValueTo(targetInput).style('grid-row-start:2').element).disabled = true;
 bindGrid.newWrap('h2', { t: "Binding with Xfer Function" });
 let op = bindGrid.newWrap("p", { t: "I will be uppercase", s: "grid-row-start:2" });
 op.bindTo(targetInput, 'value', (nv) => {
@@ -139,12 +145,12 @@ rebinder.onClick(() => {
   (<HTMLButtonElement>rebinder.element).disabled = true;
   (<HTMLButtonElement>breaker.element).disabled = false;
 });
-let chainGang = newBindSect.newWrap('h2',{t:"Wrapper Binding Chain"})
-  .newWrap('div',undefined,'after');
-  chainGang.newWrap('p',{t:"(bound to target above)"});
+let chainGang = newBindSect.newWrap('h2', { t: "Wrapper Binding Chain" })
+  .newWrap('div', undefined, 'after');
+chainGang.newWrap('p', { t: "(bound to target above)" });
 let one = chainGang.newWrap('p').bindTextTo(targetInput)
-chainGang.newWrap('p',{t:"(👇 bound to 👆)"});
-let two = chainGang.newWrap('p').bindTextTo(one,'text');
-chainGang.newWrap('p',{t:"(👇 bound to 👆)"});
-chainGang.newWrap('p').bindTextTo(two,'text');
+chainGang.newWrap('p', { t: "(👇 bound to 👆)" });
+let two = chainGang.newWrap('p').bindTextTo(one, 'text');
+chainGang.newWrap('p', { t: "(👇 bound to 👆)" });
+chainGang.newWrap('p').bindTextTo(two, 'text');
 //#endregion

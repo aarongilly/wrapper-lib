@@ -198,10 +198,8 @@ export class Binding {
         if (changeKey == this.changeKey) {
             let xferResult = this.xferFunc(newVal, changeKey)!;
             if (xferResult != null && xferResult != undefined) {if (this.from.constructor.name == "Wrapper") {
-                    console.log('applying default behavior for Wrapper binding');
                     (<Wrapper>this.from).text(xferResult);
                 } else {
-                    console.log('applying default behavior for non-wrapper binding');
                     this.from.boundVal = xferResult
                 }
             }
@@ -408,6 +406,40 @@ export class Wrapper extends Observable implements Observer { //implements Obser
     bindValueTo(target: Observable, changeKey?: string, xferFunc?: Function) {
         if (!xferFunc) xferFunc = (nv: any) => { this.setVal(nv) }
         return this.bindTo(target, changeKey, xferFunc);
+    }
+
+    /**
+     * Create a set of <li> Wrappers for each element in the target's 
+     * obsVal (if the obsVal is an array). Should be called on a Wrapper
+     * that's wrapping a <ul> or <li> element.
+     * @param target Observable with an obsVal that's an array.
+     * Works best if it's an array of Strings or numbers.
+     * @param changeKey optional, a key for the change to the Observable
+     * that this Wrapper should be notified about. If supplied, changes to 
+     * the Observable with different changeKeys will not notify this Wrapper.
+     */
+    bindListTo(target: Observable, changeKey?: string) {
+        this.bindTo(target,changeKey,(nv:Array<string>)=>{
+            this.html(''); //nuke old array
+            this.listContent(nv);
+          }).listContent(target.getVal()); //bindTo array doesn't support grabbing intial value
+    }
+
+    /**
+     * Create a set of <option> Wrappers for each element in the target's 
+     * obsVal (if the obsVal is an array). Should be called on a Wrapper 
+     * that is wrapping a <select> element.
+     * @param target Observable with an obsVal that's an array.
+     * Works best if it's an array of Strings or numbers.
+     * @param changeKey optional, a key for the change to the Observable
+     * that this Wrapper should be notified about. If supplied, changes to 
+     * the Observable with different changeKeys will not notify this Wrapper.
+     */
+     bindSelectTo(target: Observable, changeKey?: string) {
+        this.bindTo(target,changeKey,(nv:Array<string>)=>{
+            this.html(''); //nuke old array
+            this.selectContent(nv);
+          }).selectContent(target.getVal()); //bindTo array doesn't support grabbing intial value
     }
 
      /**
