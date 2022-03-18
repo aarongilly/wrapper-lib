@@ -1,9 +1,10 @@
 {
   "name": "wrapper-lib",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "files": ["/dist"],
   "main": "./dist/wrapper-lib.js",
   "module": "./dist/wrapper-lib.js",
+  "keywords": ["wrapper","binding","chaining","observable"],
   "exports": {
     ".":{
       "import": "./dist/wrapper-lib.js",

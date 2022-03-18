@@ -865,7 +865,7 @@ export class WrappedInputLabelPair extends Wrapper {
      * @param inputTag the type of input
      * @param options a map of {@link WrappedInputLabelPairOptions}
      */
-    constructor(container: HTMLElement, inputId: string, inputTag: "input" | "textarea" = 'input', options?: WrappedInputLabelPairOptions) {
+    constructor(container: HTMLElement, inputId: string, inputTag: "input" | "textarea" | "select" = 'input', options?: WrappedInputLabelPairOptions) {
         super('div', container);
         this.container = this.element;
         this.style('display:flex');
