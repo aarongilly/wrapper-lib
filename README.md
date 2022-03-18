@@ -10,12 +10,6 @@ Wrapper is a class that *wraps* an HTML Element, allowing you to do things to th
 
 It's primary purpose is for building out a UI in JavaScript without writing so much code. Compare these blocks of code that do the same thing.
 
-## DEV TODO 
-
-- [ ] Figure out Array binding, for composite wrappers
-- [ ] Think about modals, maybe
-- [ ] Make static working copy available on glitch, & my website
-
 ### Basic 3 Part Example
 ```
 //using vanilla browser apis
