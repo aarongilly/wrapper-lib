@@ -24,6 +24,14 @@ let features = ['Supports Chaining', 'Concise(er) syntax', 'Basic data binding',
 compGrid.newWrap('div', { s: "grid-column-start:1" }).newWrap('h2', { t: "Create Lists from Arrays" }).newWrap('ul', undefined, 'after').listContent(features);
 compGrid.newWrap('div', { s: "grid-column-start:2" }).newWrap('h2', { t: "Create Selects from Arrays" }).newWrap('select', undefined, 'after').selectContent(features);
 compositeSection.newWrap('h2').text('Simple Text Input Example');
+
+const inputTarget = {name: 'jim panzee'};
+
+compositeSection.newWrap('h2', { t: "Temp test" });
+compositeSection.makeLabeledInput(inputTarget);
+
+/*
+
 let inputPair = compositeSection.makeLabeledInput('text-input-example');
 inputPair.input.setVal("⬅ this input is paired with").onEnterKey(() => { console.log('You pressed enter!') }); //example event binding
 inputPair.label.style('margin-right: 0.5em').text("This Label is Paired with ➡"); //accessing inner member of the inputPair
@@ -48,7 +56,7 @@ bSect.newWrap('p', {
   c: 'explanatory'
 })
 bSect.newWrap('h2', { t: "Observers Bound to Observables" });
-bSect.newWrap('p',{c:'explanatory'}).text(`This section contains 3 different Observers bound to 3 different Observables
+bSect.newWrap('p', { c: 'explanatory' }).text(`This section contains 3 different Observers bound to 3 different Observables
   - one with a primative value, illustrating the simplest case
   - one with a simple object property, illustrating the use of changeKey ('boundProperty') to select a property to observe
   - one with a nested property, illustrating the use of changeKey ('outer.inner') to identify the nested propety`)
@@ -157,3 +165,5 @@ let two = chainGang.newWrap('p').bindTextTo(one, 'text');
 chainGang.newWrap('p', { t: "(👇 bound to 👆)" });
 chainGang.newWrap('p').bindTextTo(two, 'text');
 //#endregion
+
+*/

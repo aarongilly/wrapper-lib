@@ -194,10 +194,11 @@ export class Binding {
      * @param changeKey when supplied, this argument must match the value of
      * this's changeKey value in order to propagate the change.
      */
-    public handleChange(newVal: any, changeKey?: string){
+    public handleChange(newVal: any, changeKey?: string) {
         if (changeKey == this.changeKey) {
             let xferResult = this.xferFunc(newVal, changeKey)!;
-            if (xferResult != null && xferResult != undefined) {if (this.from.constructor.name == "Wrapper") {
+            if (xferResult != null && xferResult != undefined) {
+                if (this.from.constructor.name == "Wrapper") {
                     (<Wrapper>this.from).text(xferResult);
                 } else {
                     this.from.boundVal = xferResult
@@ -228,14 +229,14 @@ export interface WrapperOptions {
     h?: string; //innerHTML
     s?: string; //style attribute
     b?: Observable; //bind (text) to
-    iT?: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week" //input type
+    iT?: InputType;
 }
 
 export interface WrappedInputLabelPairOptions {
     lbl?: string,
     default?: string,
     placehold?: string,
-    inputType?: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week",
+    inputType?: InputType,
     contStyle?: string,
     lblStyle?: string,
     inputStyle?: string,
@@ -244,6 +245,7 @@ export interface WrappedInputLabelPairOptions {
 
 export type ObservableFeature = "text" | "value" | "style"
 export type WrapperPosition = "inside" | "before" | "after"
+export type InputType = "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week"
 
 type HTMLElementsWithValue = HTMLButtonElement | HTMLInputElement | HTMLMeterElement | HTMLLIElement | HTMLOptionElement | HTMLProgressElement | HTMLParamElement;
 
@@ -361,8 +363,8 @@ export class Wrapper extends Observable implements Observer { //implements Obser
     bindTextTo(target: Observable, changeKey?: string, xferFunc?: Function) {
         this.text(JSON.stringify(target.getVal())); //seems to work?
         if (typeof target.getVal() == 'string') this.text(target.getVal()); //prevents quotes
-        if(target.constructor.name == "Wrapper" && changeKey == 'text') this.text((<Wrapper> target).getText())
-        if(target.constructor.name == "Wrapper" && changeKey == 'style') this.text((<Wrapper> target).getStyle())
+        if (target.constructor.name == "Wrapper" && changeKey == 'text') this.text((<Wrapper>target).getText())
+        if (target.constructor.name == "Wrapper" && changeKey == 'style') this.text((<Wrapper>target).getStyle())
         return this.bindTo(target, changeKey, xferFunc);
     }
 
@@ -419,10 +421,10 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * the Observable with different changeKeys will not notify this Wrapper.
      */
     bindListTo(target: Observable, changeKey?: string) {
-        this.bindTo(target,changeKey,(nv:Array<string>)=>{
+        this.bindTo(target, changeKey, (nv: Array<string>) => {
             this.html(''); //nuke old array
             this.listContent(nv);
-          }).listContent(target.getVal()); //bindTo array doesn't support grabbing intial value
+        }).listContent(target.getVal()); //bindTo array doesn't support grabbing intial value
     }
 
     /**
@@ -435,18 +437,18 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * that this Wrapper should be notified about. If supplied, changes to 
      * the Observable with different changeKeys will not notify this Wrapper.
      */
-     bindSelectTo(target: Observable, changeKey?: string) {
-        this.bindTo(target,changeKey,(nv:Array<string>)=>{
+    bindSelectTo(target: Observable, changeKey?: string) {
+        this.bindTo(target, changeKey, (nv: Array<string>) => {
             this.html(''); //nuke old array
             this.selectContent(nv);
-          }).selectContent(target.getVal()); //bindTo array doesn't support grabbing intial value
+        }).selectContent(target.getVal()); //bindTo array doesn't support grabbing intial value
     }
 
-     /**
-     * Grab all the Bindings that are assocaited with this Observer
-     * @returns array of Bindings where this == binding.from
-     */
-      getBindings() {
+    /**
+    * Grab all the Bindings that are assocaited with this Observer
+    * @returns array of Bindings where this == binding.from
+    */
+    getBindings() {
         return this.boundTo;
     }
 
@@ -504,7 +506,7 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      */
     text(text: string): Wrapper {
         this.element.innerText = text;
-        this.notifySubscribers(text,'text');
+        this.notifySubscribers(text, 'text');
         return this
     }
 
@@ -542,7 +544,7 @@ export class Wrapper extends Observable implements Observer { //implements Obser
             if (style.charAt(style.length - 1) != ";") style = style + "; "
         }
         this.element.setAttribute('style', style + styleString);
-        this.notifySubscribers(this.getStyle(),'style');
+        this.notifySubscribers(this.getStyle(), 'style');
         return this
     }
 
@@ -644,7 +646,7 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      */
     getStyle(): string {
         let style = this.element.getAttribute('style');
-        if(style == null) style = ''
+        if (style == null) style = ''
         return style
     }
 
@@ -691,7 +693,7 @@ export class Wrapper extends Observable implements Observer { //implements Obser
     setVal(val: string) {
         (<HTMLInputElement | HTMLParamElement | HTMLButtonElement |
             HTMLOptionElement | HTMLLIElement>this.element).value = val;
-        this.notifySubscribers(val,'value');
+        this.notifySubscribers(val, 'value');
         return this;
     }
 
@@ -844,13 +846,46 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * @param location where the labeled input should be in relation to its caller
      * @returns the Wrapper (for the outer div)
      */
-    makeLabeledInput(id: string, inputTag?: 'input' | 'textarea', location?: WrapperPosition, options?: WrappedInputLabelPairOptions): WrappedInputLabelPair {
-        let container = this.newWrap('div', undefined, location)
-        inputTag = (inputTag === undefined) ? 'input' : inputTag;
-        location = (location === undefined) ? 'inside' : location;
-        let lbldInpt = new WrappedInputLabelPair(container.element, id, (<'input' | 'textarea'>inputTag), options);
-        return lbldInpt;
+    // makeLabeledInput(id: string, inputTag?: 'input' | 'textarea', location?: WrapperPosition, options?: WrappedInputLabelPairOptions): WrappedInputLabelPair {
+    //     let container = this.newWrap('div', undefined, location)
+    //     inputTag = (inputTag === undefined) ? 'input' : inputTag;
+    //     location = (location === undefined) ? 'inside' : location;
+    //     let lbldInpt = new WrappedInputLabelPair(container.element, id, (<'input' | 'textarea'>inputTag), options);
+    //     return lbldInpt;
+    // }
+
+    makeLabeledInput(singleKeyObj: { [key: string]: any },) {
+        if (typeof singleKeyObj != 'object') throw new Error("Primatives cannot be passed to makeLabeledInput");
+        if (Object.keys(singleKeyObj).length > 1) console.warn("More than one key was passed into makeLabeledInput. Other keys were ignored");
+        const key = Object.keys(singleKeyObj)[0]
+        const val = singleKeyObj[key];
+        let type = 'text';
+        if (typeof val === 'number') type = "number";
+        if (typeof val === 'boolean') type = "checkbox";
+        if (typeof val === 'string' && val.length > 99) type = 'textarea'; //maybe a bad idea
+        if (Array.isArray(val)) {
+            //todo - handle select case
+            console.warn("Still need to handle plain objects");
+        } else if (typeof val === "object") {
+            if (Object.prototype.toString.call(val) === "[object Date]") {
+                type = 'date';
+            } else {
+                //TODO - object case
+                console.warn("Still need to handle plain objects");
+            }
+        }
+        let inputTag = 'input';
+        if(type === 'textarea' || type === 'select') inputTag = type;
+        let inputPair = new WrappedInputLabelPair(undefined,key,(<'input'|'textarea'|'select'> inputTag));
+        inputPair.label.text(key.charAt(0).toUpperCase()+key.slice(1)).style('margin-right: 0.5rem');
+        inputPair.input.setVal(val);
+        this.element.appendChild(inputPair.element);
     }
+}
+
+export class AltLabeledInputOpts {
+    tagOverride?: 'text' | 'select' | 'textarea'
+    typeOverride?: InputType
 }
 
 export class WrappedInputLabelPair extends Wrapper {
@@ -860,15 +895,16 @@ export class WrappedInputLabelPair extends Wrapper {
     /**
      * Creates 3 Wrappers. An outer, containing Wrapper (div) with an input Wrapper
      * and a label Wrapper inside it. The input is bound to the container by the inputId
-     * @param container Where to put the WrappedInputLabelPair
+     * @param existingContainer Where to put the WrappedInputLabelPair
      * @param inputId the id of the input element, used in the 'for' property of the label
      * @param inputTag the type of input
      * @param options a map of {@link WrappedInputLabelPairOptions}
      */
-    constructor(container: HTMLElement, inputId: string, inputTag: "input" | "textarea" | "select" = 'input', options?: WrappedInputLabelPairOptions) {
-        super('div', container);
+    constructor(existingContainer?: HTMLElement, inputId?: string, inputTag: "input" | "textarea" | "select" = 'input', options?: WrappedInputLabelPairOptions) {
+        super('div', existingContainer);
         this.container = this.element;
         this.style('display:flex');
+        if(inputId===undefined) inputId = Math.random().toString(36).slice(6); //make random id
         this.label = this.newWrap('label').attr('for', inputId).text('Input');
         this.input = this.newWrap(inputTag, { i: inputId });
         if (options) {
@@ -886,6 +922,15 @@ export class WrappedInputLabelPair extends Wrapper {
         }
     }
 }
+
+// export function makeLabledInput(singleKeyObject: {[key: string]: any}): WrappedInputLabelPair
+//     if(typeof singleKeyObject != 'object') throw new Error("Primatives cannot be passed to makeLabeledInput");
+//     if(Object.keys(singleKeyObject).length > 1) console.warn("More than one key was passed into makeLabeledInput. Other keys were ignored");
+//     const key = Object.keys(singleKeyObject)[0]
+//     const val = singleKeyObject[key];
+
+//     let pair = new WrappedInputLabelPair()
+// }
 
 /*
 export class WrappedModal extends Wrapper{
