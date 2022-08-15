@@ -307,6 +307,11 @@ class Wrapper extends Observable {
   kill() {
     this.element.remove();
   }
+  killChildren() {
+    this.children.forEach((child) => {
+      child.kill();
+    });
+  }
   removeClass(className) {
     let classes = this.element.classList;
     classes.remove(className);
@@ -386,9 +391,11 @@ class Wrapper extends Observable {
   }
   listContent(textList, idList) {
     if (this.element.tagName != "UL" && this.element.tagName != "OL") {
-      console.error({ "Not a list container->:": this.element });
+      console.error(`The Wrapper instance from which listContent was called is not 
+            wrapped around a 'ul' or 'ol' element. It's a ${this.element}`);
       throw new Error('List Content must be appended to a "ul" or "ol"');
     }
+    this.killChildren();
     if (idList) {
       if (textList.length != idList.length) {
         console.error({ "not the same length": textList, "as": idList });
@@ -435,13 +442,15 @@ class Wrapper extends Observable {
   }
 }
 class WrappedInputLabelPair extends Wrapper {
-  constructor(container, inputId, inputTag = "input", options) {
-    super("div", container);
+  constructor(existingContainer, inputId, inputTag = "input", options) {
+    super("div", existingContainer);
     __publicField(this, "container");
     __publicField(this, "label");
     __publicField(this, "input");
     this.container = this.element;
     this.style("display:flex");
+    if (inputId === void 0)
+      inputId = Math.random().toString(36).slice(6);
     this.label = this.newWrap("label").attr("for", inputId).text("Input");
     this.input = this.newWrap(inputTag, { i: inputId });
     if (options) {

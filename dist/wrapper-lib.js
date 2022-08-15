@@ -562,6 +562,14 @@ export class Wrapper extends Observable {
         this.element.remove();
     }
     /**
+     * Removes any child wrappers from the parent wrapper
+     */
+    killChildren() {
+        this.children.forEach((child) => {
+            child.kill();
+        });
+    }
+    /**
      * Calls "remove" on the classList of the wrapped element
      * @param className class to remove from the element
      * @returns this, for chaining
@@ -727,18 +735,20 @@ export class Wrapper extends Observable {
     }
     ///#region #### Composite Wrappers ####
     /**
-     * For use with <ol> or <ul> elements. EXPECTS TO BE PUT INSIDE
-     * AN EXISTING <ol> OR <uL> ELEMENT.
-     *  Creates a series of <li> elements for elements in an array
+     * For use with ordered list or unordered list elements. EXPECTS TO BE PUT INSIDE
+     * AN EXISTING LIST ELEMENT.
+     *  Creates a series of LI elements for elements in an List
      * @param textList the visible text to create each element for
      * @param idList optional IDs to include
      * @returns this, for chaining
      */
     listContent(textList, idList) {
         if (this.element.tagName != 'UL' && this.element.tagName != 'OL') {
-            console.error({ 'Not a list container->:': this.element });
+            console.error(`The Wrapper instance from which listContent was called is not 
+            wrapped around a 'ul' or 'ol' element. It's a ${this.element}`);
             throw new Error('List Content must be appended to a "ul" or "ol"');
         }
+        this.killChildren();
         if (idList) {
             if (textList.length != idList.length) {
                 console.error({ 'not the same length': textList, 'as': idList });
@@ -756,9 +766,9 @@ export class Wrapper extends Observable {
         return this;
     }
     /**
-     * For use with <select> elements. EXPECTS TO BE PUT INSIDE
-     * AN EXISTING <select> ELEMENT.
-     * Creates a list of <option> elements inside the <select>
+     * For use with select elements. EXPECTS TO BE PUT INSIDE
+     * AN EXISTING SELECT ELEMENT.
+     * Creates a list of Option elements inside the Select
      * with the given display text and value text
      * @param textList
      * @param valList
@@ -810,15 +820,17 @@ export class WrappedInputLabelPair extends Wrapper {
     /**
      * Creates 3 Wrappers. An outer, containing Wrapper (div) with an input Wrapper
      * and a label Wrapper inside it. The input is bound to the container by the inputId
-     * @param container Where to put the WrappedInputLabelPair
+     * @param existingContainer Where to put the WrappedInputLabelPair
      * @param inputId the id of the input element, used in the 'for' property of the label
      * @param inputTag the type of input
      * @param options a map of {@link WrappedInputLabelPairOptions}
      */
-    constructor(container, inputId, inputTag = 'input', options) {
-        super('div', container);
+    constructor(existingContainer, inputId, inputTag = 'input', options) {
+        super('div', existingContainer);
         this.container = this.element;
         this.style('display:flex');
+        if (inputId === undefined)
+            inputId = Math.random().toString(36).slice(6); //make random id
         this.label = this.newWrap('label').attr('for', inputId).text('Input');
         this.input = this.newWrap(inputTag, { i: inputId });
         if (options) {
@@ -843,6 +855,22 @@ export class WrappedInputLabelPair extends Wrapper {
         }
     }
 }
+/*
+export function debounce(this: any, func: Function, timeout = 300){ //special fake 'this' param
+    let timer: NodeJS.Timer;
+    return (...args: any) =>{
+        clearTimeout(timer);
+        timer = setTimeout(()=> { func.apply(this, args); }, timeout);
+    };
+}
+*/
+// export function makeLabledInput(singleKeyObject: {[key: string]: any}): WrappedInputLabelPair
+//     if(typeof singleKeyObject != 'object') throw new Error("Primatives cannot be passed to makeLabeledInput");
+//     if(Object.keys(singleKeyObject).length > 1) console.warn("More than one key was passed into makeLabeledInput. Other keys were ignored");
+//     const key = Object.keys(singleKeyObject)[0]
+//     const val = singleKeyObject[key];
+//     let pair = new WrappedInputLabelPair()
+// }
 /*
 export class WrappedModal extends Wrapper{
     ... modals? Very very useful.

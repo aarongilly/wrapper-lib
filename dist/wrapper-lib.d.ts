@@ -126,20 +126,28 @@ export interface WrapperOptions {
     h?: string;
     s?: string;
     b?: Observable;
-    iT?: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week";
+    iT?: InputType;
 }
 export interface WrappedInputLabelPairOptions {
     lbl?: string;
     default?: string;
     placehold?: string;
-    inputType?: "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week";
+    inputType?: InputType;
     contStyle?: string;
     lblStyle?: string;
     inputStyle?: string;
     stacked?: boolean;
 }
+export interface FormInputSchema {
+    label: string;
+    inputType: InputType | 'object' | 'array';
+    required?: boolean;
+    placehold?: string;
+    default?: any;
+}
 export declare type ObservableFeature = "text" | "value" | "style";
 export declare type WrapperPosition = "inside" | "before" | "after";
+export declare type InputType = "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week";
 export declare class Wrapper extends Observable implements Observer {
     element: HTMLElement;
     parent: Wrapper | undefined;
@@ -342,6 +350,10 @@ export declare class Wrapper extends Observable implements Observer {
      */
     kill(): void;
     /**
+     * Removes any child wrappers from the parent wrapper
+     */
+    killChildren(): void;
+    /**
      * Calls "remove" on the classList of the wrapped element
      * @param className class to remove from the element
      * @returns this, for chaining
@@ -446,18 +458,18 @@ export declare class Wrapper extends Observable implements Observer {
      */
     onEnterKey(fun: Function): Wrapper;
     /**
-     * For use with <ol> or <ul> elements. EXPECTS TO BE PUT INSIDE
-     * AN EXISTING <ol> OR <uL> ELEMENT.
-     *  Creates a series of <li> elements for elements in an array
+     * For use with ordered list or unordered list elements. EXPECTS TO BE PUT INSIDE
+     * AN EXISTING LIST ELEMENT.
+     *  Creates a series of LI elements for elements in an List
      * @param textList the visible text to create each element for
      * @param idList optional IDs to include
      * @returns this, for chaining
      */
     listContent(textList: string[], idList?: string[]): this;
     /**
-     * For use with <select> elements. EXPECTS TO BE PUT INSIDE
-     * AN EXISTING <select> ELEMENT.
-     * Creates a list of <option> elements inside the <select>
+     * For use with select elements. EXPECTS TO BE PUT INSIDE
+     * AN EXISTING SELECT ELEMENT.
+     * Creates a list of Option elements inside the Select
      * with the given display text and value text
      * @param textList
      * @param valList
@@ -481,10 +493,10 @@ export declare class WrappedInputLabelPair extends Wrapper {
     /**
      * Creates 3 Wrappers. An outer, containing Wrapper (div) with an input Wrapper
      * and a label Wrapper inside it. The input is bound to the container by the inputId
-     * @param container Where to put the WrappedInputLabelPair
+     * @param existingContainer Where to put the WrappedInputLabelPair
      * @param inputId the id of the input element, used in the 'for' property of the label
      * @param inputTag the type of input
      * @param options a map of {@link WrappedInputLabelPairOptions}
      */
-    constructor(container: HTMLElement, inputId: string, inputTag?: "input" | "textarea" | "select", options?: WrappedInputLabelPairOptions);
+    constructor(existingContainer?: HTMLElement, inputId?: string, inputTag?: "input" | "textarea" | "select", options?: WrappedInputLabelPairOptions);
 }
