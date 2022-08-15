@@ -8,4 +8,53 @@ I'm **100% Sure** there are plenty of other libraries out there that do what thi
 
 Wrapper is a class that *wraps* an HTML Element, allowing you to do things to that element using a (slightly) more concise syntax than plain vanilla JS would get you. Wrappers can function as both Observable and Obervers. The library also contains Observable and Observer base classes for use outside of the Wrapper context.
 
+```mermaid
+  classDiagram
+	Observable <|-- Wrapper
+	Observer <|-- Wrapper
+	class Wrapper{
+		+HTMLElement element
+		+Wrapper parent?
+		+Wrapper[] children?
+		+Binding[] boundFrom?
+		+Binding[] boundTo?
+		+any boundVal
+		newWrap(...)
+		text(string)
+		attr(string)
+		html(string)
+		style(string)
+		class(string)		
+		kill()
+		getData(string)
+		setData()
+		onEvent(Function)
+		onClick(Function)
+		listContent(string[])
+		selectContent(string[])
+	}
+	class Observable{
+		+any obsVal
+		+Binding[] boundFrom
+		getVal()
+		setVal(any)
+		-notifySubscribers()
+	}
+	class Observer{
+		+any boundVal
+		+Binding[] boundTo
+		bindTo(Observable)
+		getBindings()
+		breakBinding(Observable)
+	}
+	class Binding{
+		+Observer from
+		+Observable to
+		+string changeKey?
+		+Function xferFunc?
+		handleChange()
+		break()
+	}
+```
+
 [Check out the Demo Site](https://wrapper-lib-demo.glitch.me)
