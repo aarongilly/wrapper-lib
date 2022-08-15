@@ -17,20 +17,13 @@ simpleSection.newWrap('button', { t: 'Check again' }).onEvent('click', () => {
 //#endregion
 
 //#region #### Composite Examples ####
-let compositeSection = app.newWrap('section', { h: "<h1>Composite Examples</h1>" })
+let compositeSection = app.newWrap('section', { h: "<h1>Composite Examples</h1>" });
 compositeSection.newWrap('p', { t: "The library contains utilities to make composite Wrappers (i.e. Wrappers containing Wrappers) to cover common situations", c: 'explanatory' })
 let compGrid = compositeSection.newWrap('div', { s: 'display: grid; grid-column-layout: 1fr 1fr' })
 let features = ['Supports Chaining', 'Concise(er) syntax', 'Basic data binding', 'Component-ish things'];
 compGrid.newWrap('div', { s: "grid-column-start:1" }).newWrap('h2', { t: "Create Lists from Arrays" }).newWrap('ul', undefined, 'after').listContent(features);
 compGrid.newWrap('div', { s: "grid-column-start:2" }).newWrap('h2', { t: "Create Selects from Arrays" }).newWrap('select', undefined, 'after').selectContent(features);
 compositeSection.newWrap('h2').text('Simple Text Input Example');
-
-const inputTarget = {name: 'jim panzee'};
-
-compositeSection.newWrap('h2', { t: "Temp test" });
-compositeSection.makeLabeledInput(inputTarget);
-
-/*
 
 let inputPair = compositeSection.makeLabeledInput('text-input-example');
 inputPair.input.setVal("⬅ this input is paired with").onEnterKey(() => { console.log('You pressed enter!') }); //example event binding
@@ -44,10 +37,28 @@ let grid = compositeSection.newWrap('div').style('display: grid; grid-template-c
 let checkPair = grid.makeLabeledInput('check-input', 'input', 'inside', { inputType: 'checkbox', lbl: "Show Date Example, too?" });
 (<HTMLInputElement>checkPair.input.element).checked = true;
 let datePair = grid.makeLabeledInput('date-input', undefined, undefined, { inputType: 'date', lbl: "Date Input", lblStyle: "margin-right: 0.5em" });
+(<HTMLInputElement>datePair.input.element).value = new Date().toISOString().substring(0,10);
 datePair.bindTo(checkPair.input, 'value', (v) => { //neat binding example
   datePair.style(v ? 'display:flex' : 'display:none')
 })
 //#endregion
+
+// //#region #### Dynamic Form Examples ####
+// let formSection = app.newWrap('section',{h:"<h1>Form-Built-from-Object Example</h1>"});
+// formSection.newWrap('p', { t: "Build forms dynamically based on objects.", c: 'explanatory' })
+
+// const myDate = new Date();
+// formSection.newWrap('h2', { t: "Single-Keyed Object ➡ Single Labeled Input" });
+// formSection.makeInputFor({myDate: myDate }).newWrap('span',{s: 'margin-left: 1em;', c:'explanatory',t:"⬅ for: {myDate: dateObj}"});
+// formSection.makeInputFor({myString: "String val" }).newWrap('span',{s: 'margin-left: 1em', c:'explanatory',t:"⬅ for: {myString: 'String val'}"});
+// formSection.makeInputFor({myNumber: 5 }).newWrap('span',{s: 'margin-left: 1em', c:'explanatory',t:"⬅ for: {myNumber: 5}"});
+// formSection.makeInputFor({myBool: true }).newWrap('span',{s: 'margin-left: 1em', c:'explanatory',t:"⬅ for: {myBool: true}"});
+// formSection.newWrap('h2',{t:"Simple Form"});
+// const myObject = {name: "Jim Panzee", status: "grumpy", age: 4}
+// formSection.makeFormFor(myObject);
+// formSection.newWrap('h2',{t:"Complicated Form"});
+// formSection.newWrap('p',{t:'#TODOAFTER'});
+// //and remember the ultimate concept was a form with data binding, too.
 
 //#region #### Binding with Variables Section ####
 let bSect = app.newWrap('section', { h: '<h1>Binding with Observables</h1>' });
@@ -85,22 +96,21 @@ incBtn.onClick(() => {
   Nested: ${JSON.stringify(nestedObs.getVal(), null, 2)}`)
 })
 
-
 bSect.newWrap('h2', { t: "Wrappers Bound to Observerables" });
 let flexCont = bSect.newWrap('div', { s: "display:flex; justify-content: space-evenly" })
 //experimenting with alternate ways to build up composites
 flexCont.newWrap('div', { s: 'display:flex' })
   .newWrap('div', { s: "border:solid; padding:0.5em" })
-  .newWrap('div', { t: "Primative", s: "margin-top:0.25em" }).parent
-  .newWrap('p', { s: "text-align: center; margin: 0.25em; font-size: 1.5em" }).bindTextTo(primativeObs).parent
+  .newWrap('div', { t: "Primative", s: "margin-top:0.25em" }).parent!
+  .newWrap('p', { s: "text-align: center; margin: 0.25em; font-size: 1.5em" }).bindTextTo(primativeObs).parent!
   .newWrap('button', { s: "width: 100%", t: "Increment Primative" }).onClick(() => primativeObs.setVal(primativeObs.getVal() + 1));
 
 flexCont.newWrap('div', { s: 'display:flex' })
   .newWrap('div', { s: "border:solid; padding:0.5em" })
-  .newWrap('div', { t: "Object Property", s: "margin-top:0.25em" }).parent
+  .newWrap('div', { t: "Object Property", s: "margin-top:0.25em" }).parent!
   .newWrap('p', { s: "margin: 0.25em; font-size: 1.5em" })
-  .bindTextTo(objectObs, 'boundProperty', () => JSON.stringify(objectObs.getVal(), null, 2)).parent
-  .newWrap('button', { s: "width: 100%", t: "Increment Bound Property" }).onClick(() => objectObs.setVal(objectObs.getVal('boundProperty') + 1, 'boundProperty')).parent
+  .bindTextTo(objectObs, 'boundProperty', () => JSON.stringify(objectObs.getVal(), null, 2)).parent!
+  .newWrap('button', { s: "width: 100%", t: "Increment Bound Property" }).onClick(() => objectObs.setVal(objectObs.getVal('boundProperty') + 1, 'boundProperty')).parent!
   .newWrap('button', {
     s: "width: 100%; margin-top:0.25em",
     t: "Set a Different Property"
@@ -109,9 +119,9 @@ flexCont.newWrap('div', { s: 'display:flex' })
 
 flexCont.newWrap('div', { s: 'display:flex' })
   .newWrap('div', { s: "border:solid; padding:0.5em" })
-  .newWrap('div', { t: "Object Nested Property", s: "margin-top:0.25em" }).parent
+  .newWrap('div', { t: "Object Nested Property", s: "margin-top:0.25em" }).parent!
   .newWrap('p', { s: "text-align: center; margin: 0.25em; font-size: 1.5em" })
-  .bindTextTo(nestedObs, 'outer.inner', () => JSON.stringify(nestedObs.getVal())).parent
+  .bindTextTo(nestedObs, 'outer.inner', () => JSON.stringify(nestedObs.getVal())).parent!
   .newWrap('button', { s: "width: 100%", t: "Increment Nested Object Property" }).onClick(() => nestedObs.setVal(nestedObs.getVal('outer.inner') + 1, 'outer.inner'));
 
 bSect.newWrap('h2').text("Wrapper Observing an Array");
@@ -165,5 +175,3 @@ let two = chainGang.newWrap('p').bindTextTo(one, 'text');
 chainGang.newWrap('p', { t: "(👇 bound to 👆)" });
 chainGang.newWrap('p').bindTextTo(two, 'text');
 //#endregion
-
-*/
