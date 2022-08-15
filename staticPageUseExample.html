@@ -12,7 +12,7 @@
         import {Wrapper} from 'https://cdn.jsdelivr.net/npm/wrapper-lib@latest/dist/wrapper-lib.es.js';
         let wrapper = new Wrapper(undefined,document.querySelector("#target"));
         wrapper.text("HELLO WORLD!")
-        wrapper.newWrap('p',{t:"Nice to see you!"},'after');
+        let btn = wrapper.newWrap('button',{t:'click me'},'after').onClick(()=>{alert('you clicked me')});
     </script>
 </body>
 </html>
