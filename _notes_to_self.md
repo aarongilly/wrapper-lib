@@ -11,5 +11,6 @@ First, this file shouldn't be published to NPM, becuase its name starts with an 
 # Dev TODOs
 
 - [ ] Think about modals, maybe
-- [ ] Make static working copy available on glitch, & my website
+- [ ] Finish & test the "makeInputFor" 
 - [ ] Make README better
+- [ ] Integrate TypeDoc for documentation?
