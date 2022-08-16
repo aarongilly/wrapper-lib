@@ -16,5 +16,10 @@
       "noImplicitReturns": true,
       "outDir": "dist"
     },
-    "include": ["lib"]
+    "include": ["lib"],
+    "typedocOptions": {
+      "entryPoints": ["lib/wrapper-lib.ts"],
+      "out": "docs",
+      "githubPages": false
+  }
   }

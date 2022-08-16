@@ -1,12 +1,19 @@
 {
   "name": "wrapper-lib",
   "version": "1.0.5",
-  "files": ["/dist"],
+  "files": [
+    "/dist"
+  ],
   "main": "./dist/wrapper-lib.js",
   "module": "./dist/wrapper-lib.js",
-  "keywords": ["wrapper","binding","chaining","observable"],
+  "keywords": [
+    "wrapper",
+    "binding",
+    "chaining",
+    "observable"
+  ],
   "exports": {
-    ".":{
+    ".": {
       "import": "./dist/wrapper-lib.js",
       "require": "./dist/wrapper-lib.js"
     }
@@ -14,10 +21,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && tsc",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "makedocs": "typedoc"
   },
   "devDependencies": {
     "typescript": "^4.5.4",
-    "vite": "^2.8.0"
+    "vite": "^2.8.0",
+    "typedoc": "^0.23.10"
   }
 }

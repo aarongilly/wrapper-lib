@@ -1,4 +1,9 @@
 
+/**
+ * The Observable class is built to enable {@link Observer | Observers} to
+ * observe. This means that Observers can follow the {@link obsVal} of the
+ * Observable they are bound to. See {@link Binding}. 
+ */
 export class Observable {
     private obsVal: any;
     public boundFrom: Binding[];
@@ -258,7 +263,13 @@ export type InputType = "button" | "checkbox" | "color" | "date" | "datetime-loc
 type HTMLElementsWithValue = HTMLButtonElement | HTMLInputElement | HTMLMeterElement | HTMLLIElement | HTMLOptionElement | HTMLProgressElement | HTMLParamElement;
 
 export class Wrapper extends Observable implements Observer { //implements Observable, Observer {
+    /**
+     * This is my description of the element property here. Yo. 😁
+     */
     public element: HTMLElement;
+    /**
+     * These comments should be filled in to support TypeDoc
+     */
     public parent: Wrapper | undefined;
     public children: Wrapper[];
     public boundFrom: Binding[];
@@ -419,9 +430,9 @@ export class Wrapper extends Observable implements Observer { //implements Obser
     }
 
     /**
-     * Create a set of <li> Wrappers for each element in the target's 
+     * Create a set of 'li' Wrappers for each element in the target's 
      * obsVal (if the obsVal is an array). Should be called on a Wrapper
-     * that's wrapping a <ul> or <li> element.
+     * that's wrapping a 'ul' or 'li' element.
      * @param target Observable with an obsVal that's an array.
      * Works best if it's an array of Strings or numbers.
      * @param changeKey optional, a key for the change to the Observable
@@ -436,9 +447,9 @@ export class Wrapper extends Observable implements Observer { //implements Obser
     }
 
     /**
-     * Create a set of <option> Wrappers for each element in the target's 
+     * Create a set of 'option'>' Wrappers for each element in the target's 
      * obsVal (if the obsVal is an array). Should be called on a Wrapper 
-     * that is wrapping a <select> element.
+     * that is wrapping a 'select' element.
      * @param target Observable with an obsVal that's an array.
      * Works best if it's an array of Strings or numbers.
      * @param changeKey optional, a key for the change to the Observable
