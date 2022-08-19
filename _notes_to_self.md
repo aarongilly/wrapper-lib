@@ -11,6 +11,7 @@ First, this file shouldn't be published to NPM, becuase its name starts with an 
 # Dev TODOs
 
 - [ ] Think about modals, maybe
+    https://daily-dev-tips.com/posts/vanilla-javascript-modal-pop-up/
 - [ ] Finish & test the "makeInputFor" 
 - [ ] Make README better
-- [ ] Integrate TypeDoc for documentation?
+- [ ] Finish integrating TypeDocs (comments & whatnot)

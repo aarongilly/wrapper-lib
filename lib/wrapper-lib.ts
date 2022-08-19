@@ -748,6 +748,65 @@ export class Wrapper extends Observable implements Observer { //implements Obser
     }
 
     /**
+     * Adds an existing Wrapper inisde this Wrapper's wrapped 
+     * element. Useful for adding wrappers functions returned
+     * by functions into the page.
+     * @param child an existing Wrapper to insert to this one
+     * @returns this, for chaining
+     */
+    addWrapChild(child: Wrapper){
+        child.relocate(this, 'inside');
+        this.children.push(child);
+        return this;
+    }
+
+    /**
+     * Adds an existing Wrapper before this Wrapper's position
+     * in the DOM. Useful for adding wrappers functions returned
+     * by functions into the page.
+     * 
+     * @param child an existing Wrapper to insert to this one
+     * @returns this, for chaining
+     */
+     addWrapBefore(child: Wrapper){
+        child.relocate(this, 'before');
+        return this;
+    }
+
+    /**
+     * Adds an existing Wrapper after this Wrapper's position
+     * in the DOM. Useful for adding wrappers functions returned
+     * by functions into the page.
+     * @param child an existing Wrapper to insert to this one
+     * @returns this, for chaining
+     */
+     addWrapAfter(child: Wrapper){
+        child.relocate(this, 'after');
+        return this;
+    }
+
+    /**
+     * Adds a 2-D array of children into the container Wrapper
+     * in accordance with where they are positioned in the array.
+     * It will space them using the CSS String provided
+     * @param children2dArray 2d Array of Wrappers to insert
+     * @param gapSizeCSS the space between them, e.g. '10px' or '1em' or '10%'
+     */
+    addMultiWrap(children2dArray: Wrapper[][], gapSizeCSS: string){
+        this.style('display: grid; gap: 10px')
+        children2dArray.forEach((row, i)=>{
+            row.forEach((child, j)=>{
+                child.style(`
+                    ${child.getStyle()}; 
+                    grid-row: ${i+1}; 
+                    grid-column: ${j+1}`
+                    )
+                child.relocate(this,'inside');
+            })
+        })
+    }
+
+    /**
      * Creates a new event listener of the given type on the Wrapped element
      * @param eventType type of event to bind the function to
      * @param fun the function to run when the event occurs

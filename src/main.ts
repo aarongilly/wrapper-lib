@@ -15,7 +15,7 @@ simpleSection.newWrap('button', { t: 'Check again' }).onEvent('click', () => {
   )
 });
 //#endregion
-
+ 
 //#region #### Composite Examples ####
 let compositeSection = app.newWrap('section', { h: "<h1>Composite Examples</h1>" });
 compositeSection.newWrap('p', { t: "The library contains utilities to make composite Wrappers (i.e. Wrappers containing Wrappers) to cover common situations", c: 'explanatory' })
@@ -24,7 +24,6 @@ let features = ['Supports Chaining', 'Concise(er) syntax', 'Basic data binding',
 compGrid.newWrap('div', { s: "grid-column-start:1" }).newWrap('h2', { t: "Create Lists from Arrays" }).newWrap('ul', undefined, 'after').listContent(features);
 compGrid.newWrap('div', { s: "grid-column-start:2" }).newWrap('h2', { t: "Create Selects from Arrays" }).newWrap('select', undefined, 'after').selectContent(features);
 compositeSection.newWrap('h2').text('Simple Text Input Example');
-
 let inputPair = compositeSection.makeLabeledInput('text-input-example');
 inputPair.input.setVal("⬅ this input is paired with").onEnterKey(() => { console.log('You pressed enter!') }); //example event binding
 inputPair.label.style('margin-right: 0.5em').text("This Label is Paired with ➡"); //accessing inner member of the inputPair
@@ -41,6 +40,13 @@ let datePair = grid.makeLabeledInput('date-input', undefined, undefined, { input
 datePair.bindTo(checkPair.input, 'value', (v) => { //neat binding example
   datePair.style(v ? 'display:flex' : 'display:none')
 })
+compositeSection.newWrap('h2').text("Multi-Wrap Grid");
+compositeSection.newWrap('p').text("Each component within this grid is itself a Wrapper, passed to the containing wrapper via the '.addMultiWrap' method.").class('explanatory');
+let w1 = new Wrapper('div').text("Hello").style('background-color: lightgreen');
+let w2 = new Wrapper('div').text("From").style('background-color: cyan;');
+let w3 = new Wrapper('div').text("The").style('background-color: magenta');
+let w4 = new Wrapper('div').text("Grid").style('background-color: yellow');
+compositeSection.newWrap('div').addMultiWrap([[w1,w2],[w3,w4]], "30%");
 //#endregion
 
 // //#region #### Dynamic Form Examples ####
@@ -77,7 +83,6 @@ let objectObs = new Observable({ boundProperty: 0 });
 let oWatcher = new Observer().bindTo(objectObs, 'boundProperty');
 let nestedObs = new Observable({ outer: { inner: 0 } });
 let nWatcher = new Observer().bindTo(nestedObs, 'outer.inner');
-
 let incBtn = bSect.newWrap('button').text("Increment & Log Observables");
 incBtn.onClick(() => {
   primativeObs.setVal(primativeObs.getVal() + 1);
@@ -109,7 +114,7 @@ flexCont.newWrap('div', { s: 'display:flex' })
   .newWrap('div', { s: "border:solid; padding:0.5em" })
   .newWrap('div', { t: "Object Property", s: "margin-top:0.25em" }).parent!
   .newWrap('p', { s: "margin: 0.25em; font-size: 1.5em" })
-  .bindTextTo(objectObs, 'boundProperty', () => JSON.stringify(objectObs.getVal(), null, 2)).parent!
+  .bindTextTo(objectObs, 'boundProperty', () => JSON.stringify(objectObs.getVal())).parent!
   .newWrap('button', { s: "width: 100%", t: "Increment Bound Property" }).onClick(() => objectObs.setVal(objectObs.getVal('boundProperty') + 1, 'boundProperty')).parent!
   .newWrap('button', {
     s: "width: 100%; margin-top:0.25em",
@@ -128,6 +133,25 @@ bSect.newWrap('h2').text("Wrapper Observing an Array");
 let obsList = new Observable(['1']);
 bSect.newWrap('ul').bindListTo(obsList, undefined);
 bSect.newWrap('button', { t: "Add Element to Array" }).onClick(() => obsList.setVal([...obsList.getVal(), obsList.getVal().length + 1]));
+
+// This didnt' really work. Ran into a binding infinite loop. If you're going to do this, it will take more thinking
+// bSect.newWrap('h2',{t:"Wrapper Form Bound to Complex Object"});
+// let complexObj = new Observable({
+//   "topNumber": 0,
+//   "topString": "hello",
+//   "nestedObj": {
+//     "nestedBool" : true,
+//     "nestedArray" : ["Jimmy", "Cracked", "Corn"]
+//   }
+// })
+// let state = bSect.newWrap('div').text(JSON.stringify(complexObj.getVal()));//binding to top-level object isn't supported
+// bSect.makeLabeledInput('Top Number','input','inside',{inputType: 'number', lbl: "Top Level Number", lblStyle: "margin-right: 0.5em"}).input
+//   .bindValueTo(complexObj,'topNumber');
+// bSect.newWrap('button').text('Increment').onClick(()=>{
+//   complexObj.setVal(complexObj.getVal('topNumber')+1, 'topNumber');
+//   // state.text(JSON.stringify(complexObj.getVal()))
+//   console.log(complexObj)
+// })
 //#endregion
 
 //#region #### Inter-Wrapper Binding ####
@@ -136,22 +160,20 @@ newBindSect.newWrap('p', { c: "explanatory", t: "Wrappers function as Observable
 let newInput = newBindSect.makeLabeledInput('binding-example', 'input', 'inside', { lbl: "Binding Target ➡", lblStyle: "margin-right:0.5em" });
 newInput.input.placehold("Type here!");
 let targetInput = newInput.input; //better name for below
-let bindGrid = newBindSect.newWrap('div', { s: "display:grid; column-gap: 10px; grid-template-columns:repeat(4,1fr)" })
-bindGrid.newWrap('h2', { t: "Default (text) Binding" })
-bindGrid.newWrap("p", { t: "Type above and watch me change", s: "grid-row-start:2" })
-  .bindTo(targetInput);
-bindGrid.newWrap('h2', { t: "Style Binding" });
-bindGrid.newWrap('div', { s: "grid-row-start:2" }) //container maintains place in grid for child
-  .newWrap('p', { t: "I'll set my style attribute to whatever you enter above \n (e.g. try 'font-family: courier; color: red')" })
+newBindSect.newWrap('h2', { t: "Default (text) Binding" })
+newBindSect.newWrap("p", { t: "Type above and watch me change"}).bindTo(targetInput);
+newBindSect.newWrap('h2', { t: "Style Binding" });
+newBindSect.newWrap('p')
+  .text("I'll set my style attribute to whatever you enter above (e.g. try 'font-family: courier; color: red')")
   .bindStyleTo(targetInput);
-bindGrid.newWrap('h2', { t: 'Value Binding' });
-(<HTMLInputElement>bindGrid.newWrap('input').bindValueTo(targetInput).style('grid-row-start:2').element).disabled = true;
-bindGrid.newWrap('h2', { t: "Binding with Xfer Function" });
-let op = bindGrid.newWrap("p", { t: "I will be uppercase", s: "grid-row-start:2" });
+newBindSect.newWrap('h2', { t: 'Value Binding' });
+(<HTMLInputElement>newBindSect.newWrap('input').bindValueTo(targetInput).element).disabled = true;
+newBindSect.newWrap('h2', { t: "Binding with Xfer Function" });
+let op = newBindSect.newWrap("p", { t: "I will be uppercase"});
 op.bindTo(targetInput, 'value', (nv) => {
   op.text(`In uppercase: ${nv.toUpperCase()}`)
 })
-bindGrid.newWrap('h2', { t: 'Binding Breaking & Rebinding' });
+newBindSect.newWrap('h2', { t: 'Binding Breaking & Rebinding' });
 let breakable = newBindSect.newWrap('p').bindTextTo(targetInput);
 let breaker = newBindSect.newWrap('button', { t: "Break binding" });
 let rebinder = newBindSect.newWrap('button', { t: "Re-bind" });
