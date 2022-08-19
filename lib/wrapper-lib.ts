@@ -793,7 +793,7 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * @param gapSizeCSS the space between them, e.g. '10px' or '1em' or '10%'
      */
     addMultiWrap(children2dArray: Wrapper[][], gapSizeCSS: string){
-        this.style('display: grid; gap: 10px')
+        this.style('display: grid; gap:' + gapSizeCSS)
         children2dArray.forEach((row, i)=>{
             row.forEach((child, j)=>{
                 child.style(`

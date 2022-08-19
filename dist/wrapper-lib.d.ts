@@ -1,3 +1,8 @@
+/**
+ * The Observable class is built to enable {@link Observer | Observers} to
+ * observe. This means that Observers can follow the {@link obsVal} of the
+ * Observable they are bound to. See {@link Binding}.
+ */
 export declare class Observable {
     private obsVal;
     boundFrom: Binding[];
@@ -149,7 +154,13 @@ export declare type ObservableFeature = "text" | "value" | "style";
 export declare type WrapperPosition = "inside" | "before" | "after";
 export declare type InputType = "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week";
 export declare class Wrapper extends Observable implements Observer {
+    /**
+     * This is my description of the element property here. Yo. 😁
+     */
     element: HTMLElement;
+    /**
+     * These comments should be filled in to support TypeDoc
+     */
     parent: Wrapper | undefined;
     children: Wrapper[];
     boundFrom: Binding[];
@@ -244,9 +255,9 @@ export declare class Wrapper extends Observable implements Observer {
      */
     bindValueTo(target: Observable, changeKey?: string, xferFunc?: Function): this;
     /**
-     * Create a set of <li> Wrappers for each element in the target's
+     * Create a set of 'li' Wrappers for each element in the target's
      * obsVal (if the obsVal is an array). Should be called on a Wrapper
-     * that's wrapping a <ul> or <li> element.
+     * that's wrapping a 'ul' or 'li' element.
      * @param target Observable with an obsVal that's an array.
      * Works best if it's an array of Strings or numbers.
      * @param changeKey optional, a key for the change to the Observable
@@ -255,9 +266,9 @@ export declare class Wrapper extends Observable implements Observer {
      */
     bindListTo(target: Observable, changeKey?: string): void;
     /**
-     * Create a set of <option> Wrappers for each element in the target's
+     * Create a set of 'option'>' Wrappers for each element in the target's
      * obsVal (if the obsVal is an array). Should be called on a Wrapper
-     * that is wrapping a <select> element.
+     * that is wrapping a 'select' element.
      * @param target Observable with an obsVal that's an array.
      * Works best if it's an array of Strings or numbers.
      * @param changeKey optional, a key for the change to the Observable
@@ -426,6 +437,39 @@ export declare class Wrapper extends Observable implements Observer {
      * @returns this, for chaining
      */
     setData(key: string, val: string): this;
+    /**
+     * Adds an existing Wrapper inisde this Wrapper's wrapped
+     * element. Useful for adding wrappers functions returned
+     * by functions into the page.
+     * @param child an existing Wrapper to insert to this one
+     * @returns this, for chaining
+     */
+    addWrapChild(child: Wrapper): this;
+    /**
+     * Adds an existing Wrapper before this Wrapper's position
+     * in the DOM. Useful for adding wrappers functions returned
+     * by functions into the page.
+     *
+     * @param child an existing Wrapper to insert to this one
+     * @returns this, for chaining
+     */
+    addWrapBefore(child: Wrapper): this;
+    /**
+     * Adds an existing Wrapper after this Wrapper's position
+     * in the DOM. Useful for adding wrappers functions returned
+     * by functions into the page.
+     * @param child an existing Wrapper to insert to this one
+     * @returns this, for chaining
+     */
+    addWrapAfter(child: Wrapper): this;
+    /**
+     * Adds a 2-D array of children into the container Wrapper
+     * in accordance with where they are positioned in the array.
+     * It will space them using the CSS String provided
+     * @param children2dArray 2d Array of Wrappers to insert
+     * @param gapSizeCSS the space between them, e.g. '10px' or '1em' or '10%'
+     */
+    addMultiWrap(children2dArray: Wrapper[][], gapSizeCSS: string): void;
     /**
      * Creates a new event listener of the given type on the Wrapped element
      * @param eventType type of event to bind the function to

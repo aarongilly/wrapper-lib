@@ -1,3 +1,8 @@
+/**
+ * The Observable class is built to enable {@link Observer | Observers} to
+ * observe. This means that Observers can follow the {@link obsVal} of the
+ * Observable they are bound to. See {@link Binding}.
+ */
 export class Observable {
     obsVal;
     boundFrom;
@@ -212,7 +217,13 @@ export class Binding {
     }
 }
 export class Wrapper extends Observable {
+    /**
+     * This is my description of the element property here. Yo. 😁
+     */
     element;
+    /**
+     * These comments should be filled in to support TypeDoc
+     */
     parent;
     children;
     boundFrom;
@@ -386,9 +397,9 @@ export class Wrapper extends Observable {
         return this.bindTo(target, changeKey, xferFunc);
     }
     /**
-     * Create a set of <li> Wrappers for each element in the target's
+     * Create a set of 'li' Wrappers for each element in the target's
      * obsVal (if the obsVal is an array). Should be called on a Wrapper
-     * that's wrapping a <ul> or <li> element.
+     * that's wrapping a 'ul' or 'li' element.
      * @param target Observable with an obsVal that's an array.
      * Works best if it's an array of Strings or numbers.
      * @param changeKey optional, a key for the change to the Observable
@@ -402,9 +413,9 @@ export class Wrapper extends Observable {
         }).listContent(target.getVal()); //bindTo array doesn't support grabbing intial value
     }
     /**
-     * Create a set of <option> Wrappers for each element in the target's
+     * Create a set of 'option'>' Wrappers for each element in the target's
      * obsVal (if the obsVal is an array). Should be called on a Wrapper
-     * that is wrapping a <select> element.
+     * that is wrapping a 'select' element.
      * @param target Observable with an obsVal that's an array.
      * Works best if it's an array of Strings or numbers.
      * @param changeKey optional, a key for the change to the Observable
@@ -681,6 +692,60 @@ export class Wrapper extends Observable {
     setData(key, val) {
         this.element.setAttribute('data-' + key, val);
         return this;
+    }
+    /**
+     * Adds an existing Wrapper inisde this Wrapper's wrapped
+     * element. Useful for adding wrappers functions returned
+     * by functions into the page.
+     * @param child an existing Wrapper to insert to this one
+     * @returns this, for chaining
+     */
+    addWrapChild(child) {
+        child.relocate(this, 'inside');
+        this.children.push(child);
+        return this;
+    }
+    /**
+     * Adds an existing Wrapper before this Wrapper's position
+     * in the DOM. Useful for adding wrappers functions returned
+     * by functions into the page.
+     *
+     * @param child an existing Wrapper to insert to this one
+     * @returns this, for chaining
+     */
+    addWrapBefore(child) {
+        child.relocate(this, 'before');
+        return this;
+    }
+    /**
+     * Adds an existing Wrapper after this Wrapper's position
+     * in the DOM. Useful for adding wrappers functions returned
+     * by functions into the page.
+     * @param child an existing Wrapper to insert to this one
+     * @returns this, for chaining
+     */
+    addWrapAfter(child) {
+        child.relocate(this, 'after');
+        return this;
+    }
+    /**
+     * Adds a 2-D array of children into the container Wrapper
+     * in accordance with where they are positioned in the array.
+     * It will space them using the CSS String provided
+     * @param children2dArray 2d Array of Wrappers to insert
+     * @param gapSizeCSS the space between them, e.g. '10px' or '1em' or '10%'
+     */
+    addMultiWrap(children2dArray, gapSizeCSS) {
+        this.style('display: grid; gap:' + gapSizeCSS);
+        children2dArray.forEach((row, i) => {
+            row.forEach((child, j) => {
+                child.style(`
+                    ${child.getStyle()}; 
+                    grid-row: ${i + 1}; 
+                    grid-column: ${j + 1}`);
+                child.relocate(this, 'inside');
+            });
+        });
     }
     /**
      * Creates a new event listener of the given type on the Wrapped element
