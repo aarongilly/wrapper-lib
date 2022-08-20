@@ -12,6 +12,4 @@ First, this file shouldn't be published to NPM, becuase its name starts with an 
 
 - [ ] Think about modals, maybe
     https://daily-dev-tips.com/posts/vanilla-javascript-modal-pop-up/
-- [ ] Finish & test the "makeInputFor" 
-- [ ] Make README better
-- [ ] Finish integrating TypeDocs (comments & whatnot)
+- [ ] can you make DynamicForms easier to style?

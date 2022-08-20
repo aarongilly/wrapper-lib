@@ -1,7 +1,7 @@
 
 /**
  * The Observable class is built to enable {@link Observer | Observers} to
- * observe. This means that Observers can follow the {@link obsVal} of the
+ * observe. This means that Observers can follow the {@link Observable.obsVal} of the
  * Observable they are bound to. See {@link Binding}. 
  */
 export class Observable {
@@ -10,7 +10,7 @@ export class Observable {
     /**
      * Observables hold a value and notify Observers when the value is set.
      * They do this by maintaining a list of Bindings in which they are the 'to'
-     * object. Each time setVal is called they notify all subscribers in their 
+     * object. Each time {@link Observable.setVal} is called they notify all subscribers in their 
      * boundFrom list. setVal can be of any type. If a 'changeKey' is provided to
      * setVal, the changeKey string will be treated as a path to a property in the
      * obsVal object. E.G. setVal('hello','message.toWorld') would set the 
@@ -145,7 +145,7 @@ export class Binding {
     public changeKey?: string;
     public xferFunc: Function
     /**
-     * Bindings represent a connection between an Observable and an Observer.
+     * Bindings represent a connection between an {@link Observable} and an {@link Observer}.
      * They hold the xferFunction that changes the observable.obsVal into the 
      * observer.boundVal. If they contain a changeKey, then only changes to
      * the Observable with that key will cause the Observer to update.
@@ -154,8 +154,8 @@ export class Binding {
      * @param changeKey if !undefined, only changes with this key will 
      * propagate to the Observer.
      * @param xferFunc if !undefined, the xferFunction that will be applied
-     * to the new value of the Observable's obsVal to turn it into the new
-     * value of the Observer's boundVal. 
+     * to the new value of the Observable's {@link Observable.obsVal} to turn it into the new
+     * value of the Observer's {@link Observer.boundVal}. 
      * If no xferFunc is supplied, by default the boundVal will be set equal to obsVal.
      * If this function returns a non-null, non-undefined value, 
      * that is the value that will be set. 
@@ -242,25 +242,6 @@ export interface WrapperOptions {
     iT?: InputType;
 }
 
-export interface WrappedInputLabelPairOptions {
-    lbl?: string,
-    default?: string,
-    placehold?: string,
-    inputType?: InputType,
-    contStyle?: string,
-    lblStyle?: string,
-    inputStyle?: string,
-    stacked?: boolean
-}
-
-// export interface FormInputSchema {
-//     label: string,
-//     inputType: InputType | 'object' | 'array',
-//     required?: boolean,
-//     placehold?: string,
-//     default?: any, //string | number | boolean,
-// }
-
 export type ObservableFeature = "text" | "value" | "style"
 export type WrapperPosition = "inside" | "before" | "after"
 export type InputType = "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week"
@@ -269,16 +250,28 @@ type HTMLElementsWithValue = HTMLButtonElement | HTMLInputElement | HTMLMeterEle
 
 export class Wrapper extends Observable implements Observer { //implements Observable, Observer {
     /**
-     * This is my description of the element property here. Yo. 😁
+     * The HTML Element the Wrapper is wrapping. The thing it's adding value to.
      */
     public element: HTMLElement;
     /**
-     * These comments should be filled in to support TypeDoc
+     * The Wrapper whose wrapped HTML Element contains this.element.
      */
     public parent: Wrapper | undefined;
+    /**
+     * All the Wrappers whose wrapped HTML Element is contained in this.element
+     */
     public children: Wrapper[];
+    /**
+     * List of Observers who are watching this Wrapper.
+     */
     public boundFrom: Binding[];
+    /**
+     * The Observable(s) whom this Wrapper is watching in some manner.
+     */
     public boundTo: Binding[];
+    /**
+     * Holds the value the Wrapper sees in its Observable
+     */
     public boundVal: any;
     /**
      * Wrappers 'wrap' HTMLElements and are utilized to make changes to them.
@@ -287,8 +280,8 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * @param tag the tag of the element to create (if existingElement == undefined)
      * @param existingElement the element to wrap. If undefined, an element will be 
      * create on the document object, BUT WILL NOT BE VISIBLE UNTIL YOU APPEND IT TO SOMETHING
-     * @param intializers a map of {@link WrapperOptions} to initialize the Wrapper
-     * with. Can do things like setting the Wrapper's innerText with {'t':'my text'}
+     * @param intializers a map of {@link WrapperOptions} to initialize the Wrapper with, 
+     * a shorthand for many methods
      */
     constructor(tag?: keyof HTMLElementTagNameMap, existingElement?: HTMLElement, intializers?: WrapperOptions) {
         super("");
@@ -762,6 +755,7 @@ export class Wrapper extends Observable implements Observer { //implements Obser
     addChild(child: Wrapper) {
         child.relocate(this, 'inside');
         this.children.push(child);
+        child.parent = this;
         return child;
     }
 
@@ -796,30 +790,8 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * @param gapSizeCSS the space between them, e.g. '10px' or '1em' or '10%'. Defaults to '0.5em'
      * @returns this, for chaining
      */
-    addMultiWrap(children2dArray: Wrapper[][], gapSizeCSS: string = "0.5em") {
-        this.style('display: grid; gap:' + gapSizeCSS)
-        let columnCount = 0;
-        children2dArray.forEach((row) => { if (row.length > columnCount) columnCount = row.length })
-        children2dArray.forEach((row, i) => {
-            if (row.length == 1) {
-                row[0].style(`
-                ${row[0].getStyle()}; 
-                grid-row: ${i + 1}; 
-                grid-column: 1 / ${columnCount+1}
-                `)
-                row[0].relocate(this,'inside')
-            } else {
-                row.forEach((child, j) => {
-                    child.style(`
-                        ${child.getStyle()}; 
-                        grid-row: ${i + 1}; 
-                        grid-column: ${j + 1}`
-                    )
-                    child.relocate(this, 'inside');
-                })
-            }
-        })
-        return this
+    addMultiWrap(children2dArray: (Wrapper | 'merge')[][], gapSizeCSS: string = "0.5em", containerType?: keyof HTMLElementTagNameMap) {
+        return new WrapGrid(children2dArray, this.element, gapSizeCSS, containerType);
     }
 
     /**
@@ -880,7 +852,6 @@ export class Wrapper extends Observable implements Observer { //implements Obser
 
 
     ///#region #### Composite Wrappers ####
-
     /**
      * For use with ordered list or unordered list elements. EXPECTS TO BE PUT INSIDE 
      * AN EXISTING LIST ELEMENT.
@@ -944,22 +915,6 @@ export class Wrapper extends Observable implements Observer { //implements Obser
         return this;
     }
 
-    // /**
-    //  * Creates a flexbox-wrapped label & input pair
-    //  * @param inputTag input or textarea
-    //  * @param id the id to use for the input element
-    //  * @param location where the labeled input should be in relation to its caller
-    //  * @returns the Wrapper (for the outer div)
-    //  */
-    // makeLabeledInput(id: string, inputTag?: 'input' | 'textarea', location?: WrapperPosition, options?: WrappedInputLabelPairOptions): WrappedInputLabelPair {
-    //     let container = this.newWrap('div', undefined, location)
-    //     inputTag = (inputTag === undefined) ? 'input' : inputTag;
-    //     location = (location === undefined) ? 'inside' : location;
-    //     let lbldInpt = new WrappedInputLabelPair(container.element, id, (<'input' | 'textarea'>inputTag), options);
-    //     return lbldInpt;
-    // }
-
-
     /**
      * Creates a flexbox-wrapped label & input pair based on the single-keyed object passed in.
      * Will attempt to parse the type of the value and return the correct input type.
@@ -978,25 +933,17 @@ export class Wrapper extends Observable implements Observer { //implements Obser
     }
 
     /**
-     * Creates a form from an Object with multiple keys.
-     * @param obj 
-     * @param location 
-     * @returns 
+     * Creates a {@link DynamicForm} from an Object with multiple keys.
+     * @param obj the object to create the DynamicForm against
+     * @param gridStyle the css styles to apply to the grid
+     * @param lblStyle the css styles to apply to the label
+     * @param inputStyle the css styles to apply to the input
+     * @returns the created {@link DynamicForm}
      */
-    makeFormFor(obj: Record<string, any>, gridStyle?: string, lblStyle?: string, inputStyle?: string) {
-        if (typeof obj != 'object') throw new Error("Primatives cannot be used to create LabeledInput instances.");
-        let items = Object.keys(obj);
-        let lines: Wrapper[][] = [[]]
-
-        items.forEach(key => {
-            let line = new LabeledInput({ [key]: obj[key] });
-            if (lblStyle) line.label.style(lblStyle);
-            if (inputStyle) line.input.style(inputStyle);
-            lines.push([line.label, line.input])
-        })
-        let form = this.newWrap('form').addMultiWrap(lines);
-        if (gridStyle) form.style(form.getStyle() + "; " + gridStyle)
-        return form
+    makeFormFor(obj: Record<string, any>, gridStyle?: string, lblStyle?: string, inputStyle?: string): DynamicForm {
+        let dynoForm = new DynamicForm(obj, gridStyle, lblStyle, inputStyle)
+        dynoForm.form.relocate(this, 'inside')
+        return dynoForm
     }
 }
 
@@ -1014,8 +961,8 @@ export class LabeledInput {
      * Creates a label, an input, and an Observer, all wired together.
      * Will interpret the type of variable and return an appropriate input flavor.
      * Text strings of 100 or more characters will default as textareas.
-     * @param singleKeyObj 
-     * @param label 
+     * @param singleKeyObj an object with a single key & value, the value is of type primative | date | (string|number)[]
+     * @param label the label to apply to the input, defaults to the key of the object
      * @param forceTextarea if specified, will force inputs to be either textareas (if true) or regular text inputs (if false)
      */
     constructor(singleKeyObj: { [key: string]: any }, label?: string, forceTextarea?: boolean) {
@@ -1080,6 +1027,9 @@ export class LabeledInput {
     }
 }
 
+/**
+ * This class is a Wrapper-bound {@link LabeledInput}.
+ */
 export class WrappedInputLabelPair extends Wrapper {
     public container: HTMLElement;
     public label: Wrapper;
@@ -1111,16 +1061,34 @@ export class WrappedInputLabelPair extends Wrapper {
  * It allows the user to update the form, and for you to quickly pull a new Object that reflects the
  * user's updates.
  * 
+ * Currently Forms are limited to 2 columns.
+ * 
  * Wow I can't believe I got this working so quickly.
  */
 export class DynamicForm {
-    public form: Wrapper;
+    public form: WrapGrid;
     public parentBreadcrumb?: string | number;
+    public gridStyle?: string;
+    public lblStyle?: string;
+    public inputStyle?: string;
+    private lines: (Wrapper | 'merge')[][];
     private values: Record<string, any>;
-    constructor(obj: Record<string, any>, gridStyle?: string, lblStyle?: string, inputStyle?: string, parentBreadCrumb?: string | number, fieldsetTitle?: string) {
+    // private cols: number;
+    /**
+     * Creates a new {@link DynamicForm} instance. 
+     * @param obj the object the form should be based on
+     * @param gridStyle the css styles to apply to the grid
+     * @param lblStyle the css styles to apply to the label
+     * @param inputStyle the css styles to apply to the input
+     * @param parentBreadCrumb probably don't set this manually, it's used when creating subforms via {@link DynamicForm.addFormSection}
+     */
+    constructor(obj: Record<string, any>, gridStyle?: string, lblStyle?: string, inputStyle?: string, parentBreadCrumb?: string | number) {
         if (typeof obj != 'object') throw new Error("Primatives cannot be used to create DynamicForm instances.");
         let items = Object.keys(obj);
-        let lines: Wrapper[][] = [[]]
+        this.lines = [[]]
+        this.inputStyle = inputStyle;
+        this.gridStyle = gridStyle;
+        this.lblStyle = lblStyle;
         this.values = {};
         this.parentBreadcrumb = parentBreadCrumb;
 
@@ -1132,29 +1100,28 @@ export class DynamicForm {
                 if (lblStyle) line.label.style(lblStyle);
                 if (inputStyle) line.input.style(inputStyle);
                 this.values[key] = line.observer;
-                lines.push([line.label, line.input]);
+                this.lines.push([line.label, line.input]);
             } else {
                 //make a form section
-                if(Array.isArray(val)){
-                    //Array of Objects sort of works, but it's #BUGgy, looks weird & turns into number-indexed object
-                    lines.push([new Wrapper('h4', undefined, {s: "margin-bottom: 0.25em", t: key})]);
-                    val.forEach((i, j)=>{
-                        let subform = new DynamicForm(i,gridStyle,lblStyle,inputStyle,j,j.toString()) //RECURSION
-                        if(this.values[key]==undefined) this.values[key] = [];
+                if (Array.isArray(val)) {
+                    this.lines.push([new Wrapper('h4', undefined, { s: "margin-bottom: 0.25em", t: key })]);
+                    val.forEach((i, j) => {
+                        let subform = new DynamicForm(i, gridStyle, lblStyle, inputStyle, j) //RECURSION
+                        if (this.values[key] == undefined) this.values[key] = [];
                         this.values[key].push(subform);// = subform;
-                        lines.push([subform.form]);
+                        this.lines.push([subform.form, 'merge']);
                     })
-                }else{
-                    let subform = new DynamicForm(val,gridStyle,lblStyle,inputStyle,key,key) //RECURSION
+                } else {
+                    let subform = new DynamicForm(val, gridStyle, lblStyle, inputStyle, key) //RECURSION
                     this.values[key] = subform;
-                    lines.push([subform.form]);
+                    this.lines.push([subform.form, 'merge']);
                 }
             }
         })
         let containerType: keyof HTMLElementTagNameMap = 'form';
-        if(fieldsetTitle) containerType = 'fieldset'
-        this.form = new Wrapper(containerType).addMultiWrap(lines);
-        if(fieldsetTitle) this.form.newWrap('legend').text(fieldsetTitle)
+        if (parentBreadCrumb) containerType = 'fieldset'
+        this.form = new Wrapper(containerType).addMultiWrap(this.lines);
+        if (parentBreadCrumb) this.form.newWrap('legend').text(parentBreadCrumb.toString())
         if (gridStyle) this.form.style(this.form.getStyle() + "; " + gridStyle)
     }
 
@@ -1164,33 +1131,116 @@ export class DynamicForm {
      * @returns a NEW object shaped like the object the DynamicForm was built from, with its current contents
      */
     getFormData() {
-        let returnObj: any = {};   
+        let returnObj: any = {};
         Object.keys(this.values).forEach(key => {
-            if(this.values[key].constructor.name == 'DynamicForm'){
+            if (this.values[key].constructor.name == 'DynamicForm') {
                 returnObj[key] = this.values[key].getFormData(); //RECURSION         
-            }else if(Array.isArray(this.values[key])){
+            } else if (Array.isArray(this.values[key])) {
                 let inside: DynamicForm[] = []
-                this.values[key].forEach((subform: DynamicForm)=>{
+                this.values[key].forEach((subform: DynamicForm) => {
                     inside.push(subform.getFormData()); //RESCURSION
                 })
-                returnObj[key] = inside            
-            }else{
-                returnObj[key] = this.values[key].boundVal            
+                returnObj[key] = inside
+            } else {
+                returnObj[key] = this.values[key].boundVal
             }
         })
         return returnObj
     }
 
-    // addFormSection(obj: Record<string, any>, gridStyle?: string, lblStyle?: string, inputStyle?: string, parentBreadCrumb?: string | number, fieldsetTitle?: string) {
-    //     //TODO - idea here is to enable the developer to incrementally build a form at runtime
-    // }
+    /**
+     * Adds a new section to the form containing inputs for the passed in object.
+     * The new section will be included when calling {@link getFormData} on the DynamicForm.
+     * @param obj an object to create a section for
+     * @param mapKey the header for this section & the key for the object upon getFormData
+     * @returns this, for chaining.
+     */
+    addFormSection(obj: Record<string, any>, mapKey: string) {
+        let subform = new DynamicForm(obj, this.gridStyle, this.lblStyle, this.inputStyle, mapKey)
+        this.form.addRow([subform.form, 'merge']);
+        this.values[mapKey] = subform;
+        return this;
+    }
 
-    // addInputToForm(){
-    //     //TODO - same idea as above, but not creating a whole new section
-    // }
+    /**
+     * Append new row to the bottom of the form based on the passed-in object.
+     * The new row will be included when calling {@link getFormData} on the DynamicForm
+     * @param singleKeyObj an object with one key and a primative (or date, or array of strings) value
+     * @param label the text to set for the input label, defaults to the object key
+     * @param forceTextarea if set, will force the input to be a text area (if true) or a regular text input (if false)
+     * @returns this, for chaining.
+     */
+    addInputToForm(singleKeyObj: { [key: string]: any }, label?: string, forceTextarea?: boolean) {
+        let key = Object.keys(singleKeyObj)[0];
+        if (Object.keys(this.getFormData()).some(existingKey => existingKey === key)) console.warn("duplicate key detected: " + key)
+        let inputPair = new WrappedInputLabelPair(singleKeyObj, label, forceTextarea);
+        this.values[key] = inputPair.observer;
+        this.form.addRow([inputPair.label, inputPair.input]);
+        return this;
+    }
 }
 
-// Other things I might do...
+/**
+ * WrapGrid is a class to create css grid layouts using 2D arrays of wrappers.
+ */
+export class WrapGrid extends Wrapper {
+    private rows: number;
+    private cols: number;
+
+    /**
+     * Creates a new WrapGrid, a css Grid of {@link Wrapper} instances in a 2d Array.
+     * Grid cells can be merged by inserting 'merge' strings in the place of Wrappers in the array.
+     * @param children2dArray a 2D array of Wrappers and the string 'merge'.
+     * @param existingContainer Optional, if specified, the WrapGrid will fill in the provided Element
+     * @param gapSizeCSS the gap size between items on the grid, defaults to '0.5em'
+     * @param containerType the HTML Tag for the container, defaults to 'div'
+     */
+    constructor(children2dArray: (Wrapper | "merge")[][], existingContainer?: HTMLElement, gapSizeCSS: string = '0.5em', containerType: keyof HTMLElementTagNameMap = 'div') {
+        super(containerType, existingContainer);
+        this.style('display: grid; gap:' + gapSizeCSS);
+        this.rows = children2dArray.length;
+        this.cols = 0;
+        children2dArray.forEach((row) => { if (row.length > this.cols) this.cols = row.length });
+        children2dArray.forEach((row, i) => {
+            row.forEach((child, col) => {
+                if (child != 'merge') {
+                    let k = col + 1
+                    while (row[k] == 'merge') k++; //TIL you can do this
+                    child.style(`
+                            ${child.getStyle()};
+                            grid-row: ${i + 1};
+                            grid-column: ${col + 1} / ${k + 1}
+                        `)
+                    child.relocate(this, 'inside')
+                }
+            })
+        })
+    }
+
+    /**
+     * Adds a row to the bottom of the WrapGrid.
+     * Works best if the row contains the same number of 
+     * array elements as the grid is wide.
+     * @param row array of Wrappers or the string 'merge'
+     * @returns this, for chaining
+     */
+    addRow(row: (Wrapper | 'merge')[]): WrapGrid {
+        row.forEach((child, col) => {
+            if (child != 'merge') {
+                let k = col + 1
+                while (row[k] == 'merge') k++; //TIL you can do this
+                child.style(`
+                        ${child.getStyle()};
+                        grid-row: ${this.rows + 1};
+                        grid-column: ${col + 1} / ${k + 1}
+                    `)
+                child.relocate(this, 'inside')
+            }
+        })
+        this.rows = this.rows + 1;
+        return this;
+    }
+}
 
 /**
  * Checks whether the given input is a primative value.
@@ -1223,6 +1273,8 @@ export const isArrayOfPrimatives = (val: any): boolean => {
     if (val.some(v => !isPrimative(v))) return false;
     return true;
 }
+
+// Other things I might do...
 
 /*
 //len is any number between 0 and 10

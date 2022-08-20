@@ -8,53 +8,16 @@ I'm **100% Sure** there are plenty of other libraries out there that do what thi
 
 Wrapper is a class that *wraps* an HTML Element, allowing you to do things to that element using a (slightly) more concise syntax than plain vanilla JS would get you. Wrappers can function as both Observable and Obervers. The library also contains Observable and Observer base classes for use outside of the Wrapper context.
 
-```mermaid
-  classDiagram
-	Observable <|-- Wrapper
-	Observer <|-- Wrapper
-	class Wrapper{
-		+HTMLElement element
-		+Wrapper parent?
-		+Wrapper[] children?
-		+Binding[] boundFrom?
-		+Binding[] boundTo?
-		+any boundVal
-		newWrap(...)
-		text(string)
-		attr(string)
-		html(string)
-		style(string)
-		class(string)		
-		kill()
-		getData(string)
-		setData()
-		onEvent(Function)
-		onClick(Function)
-		listContent(string[])
-		selectContent(string[])
-	}
-	class Observable{
-		+any obsVal
-		+Binding[] boundFrom
-		getVal()
-		setVal(any)
-		-notifySubscribers()
-	}
-	class Observer{
-		+any boundVal
-		+Binding[] boundTo
-		bindTo(Observable)
-		getBindings()
-		breakBinding(Observable)
-	}
-	class Binding{
-		+Observer from
-		+Observable to
-		+string changeKey?
-		+Function xferFunc?
-		handleChange()
-		break()
-	}
-```
+## What You Can Do With It
 
-[Check out the Demo Site](https://wrapper-lib-demo.glitch.me)
+I've wrapped in (pun so intended it hurts) a number of use cases into this library.
+
+1. Chain build HTML Elements
+2. Create Obserables & Observers
+3. Link Observables & Observers to HTML Elements
+4. Create Inputs from Objects
+5. Create entire forms from Objects (including objects with nested objects)
+
+[Check out the Demo Site + Example Source Code on Glitch](https://glitch.com/~wrapper-lib-demo)
+
+[...or just the Demo Site](https://wrapper-lib-demo.glitch.me/)

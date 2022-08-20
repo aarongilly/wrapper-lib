@@ -86,15 +86,17 @@ class Binding {
         this.xferFunc = () => {
           let pathParts = changeKey.split(".");
           let target = this.to.getVal();
-          pathParts.forEach((p) => {
-            if (target.hasOwnProperty(p)) {
-              target = target[p];
-            } else {
-              console.warn(`
-                            Attempting to traverse bound path '${changeKey}' 
-                            failed at '${p}'`);
-            }
-          });
+          if (typeof target == "object") {
+            pathParts.forEach((p) => {
+              if (target.hasOwnProperty(p)) {
+                target = target[p];
+              } else {
+                console.warn(`
+                                Attempting to traverse bound path '${changeKey}' 
+                                failed at '${p}'`);
+              }
+            });
+          }
           this.from.boundVal = target;
         };
       } else {
@@ -364,30 +366,20 @@ class Wrapper extends Observable {
     this.element.setAttribute("data-" + key, val);
     return this;
   }
-  addWrapChild(child) {
+  addChild(child) {
     child.relocate(this, "inside");
     this.children.push(child);
-    return this;
+    child.parent = this;
+    return child;
   }
-  addWrapBefore(child) {
-    child.relocate(this, "before");
-    return this;
+  addBefore(child) {
+    return child.relocate(this, "before");
   }
-  addWrapAfter(child) {
-    child.relocate(this, "after");
-    return this;
+  addAfter(child) {
+    return child.relocate(this, "after");
   }
-  addMultiWrap(children2dArray, gapSizeCSS) {
-    this.style("display: grid; gap:" + gapSizeCSS);
-    children2dArray.forEach((row, i) => {
-      row.forEach((child, j) => {
-        child.style(`
-                    ${child.getStyle()}; 
-                    grid-row: ${i + 1}; 
-                    grid-column: ${j + 1}`);
-        child.relocate(this, "inside");
-      });
-    });
+  addMultiWrap(children2dArray, gapSizeCSS = "0.5em", containerType) {
+    return new WrapGrid(children2dArray, this.element, gapSizeCSS, containerType);
   }
   onEvent(eventType, fun) {
     this.element.addEventListener(eventType, (e) => fun(e));
@@ -458,46 +450,247 @@ class Wrapper extends Observable {
     }
     return this;
   }
-  makeLabeledInput(id, inputTag, location, options) {
-    let container = this.newWrap("div", void 0, location);
-    inputTag = inputTag === void 0 ? "input" : inputTag;
-    location = location === void 0 ? "inside" : location;
-    let lbldInpt = new WrappedInputLabelPair(container.element, id, inputTag, options);
-    return lbldInpt;
+  makeInputFor(singleKeyObj, label, forceTextarea, location = "inside") {
+    let container = this.newWrap("div", void 0, location).style("display: flex;");
+    let inputPair = new WrappedInputLabelPair(singleKeyObj, label, forceTextarea, container.element);
+    container.addChild(inputPair.label);
+    container.addChild(inputPair.input);
+    return inputPair;
+  }
+  makeFormFor(obj, gridStyle, lblStyle, inputStyle) {
+    let dynoForm = new DynamicForm(obj, gridStyle, lblStyle, inputStyle);
+    dynoForm.form.relocate(this, "inside");
+    return dynoForm;
+  }
+}
+class LabeledInput {
+  constructor(singleKeyObj, label, forceTextarea) {
+    __publicField(this, "label");
+    __publicField(this, "input");
+    __publicField(this, "observer");
+    if (typeof singleKeyObj != "object")
+      throw new Error("Primatives cannot be used to create LabeledInput instances.");
+    if (Object.keys(singleKeyObj).length > 1)
+      console.warn("More than one key was passed into makeInputFor. Other keys were ignored");
+    const key = Object.keys(singleKeyObj)[0];
+    const val = singleKeyObj[key];
+    const lbl = label ? label : key;
+    let inputId = Math.random().toString(36).slice(7);
+    this.label = new Wrapper("label").attr("for", inputId).text(lbl);
+    let type = "text";
+    if (typeof val === "number")
+      type = "number";
+    if (typeof val === "boolean")
+      type = "checkbox";
+    if (typeof val === "string" && val.length > 99)
+      type = "textarea";
+    if (Array.isArray(val)) {
+      if (isArrayOfPrimatives(val)) {
+        type = "select";
+      } else {
+        console.warn("An array of Objects is not supported by LabeledInput");
+      }
+    } else if (typeof val === "object") {
+      if (Object.prototype.toString.call(val) === "[object Date]") {
+        type = "date";
+      } else {
+        console.warn("Create a DynamicForm instance instead of a LabeledInput. (i.e. New DyanmicForm or wrapper.makeFormFor(...)");
+      }
+    }
+    let inputTag = "input";
+    if (forceTextarea != void 0) {
+      if (forceTextarea) {
+        type = "textarea";
+      } else {
+        type = "text";
+      }
+    }
+    if (type === "textarea" || type === "select") {
+      this.input = new Wrapper(type, void 0, { i: inputId });
+      if (type === "select") {
+        this.input.selectContent(val);
+      }
+    } else {
+      this.input = new Wrapper(inputTag, void 0, { i: inputId, iT: type });
+    }
+    this.observer = new Observer();
+    this.observer.bindTo(this.input, "value");
+    if (type == "date") {
+      this.input.setVal(val.toISOString().substr(0, 10));
+    } else if (type === "checkbox") {
+      this.observer.boundVal = val;
+      if (val === true)
+        this.input.setAttr("checked", "");
+    } else {
+      this.input.setVal(val);
+    }
   }
 }
 class WrappedInputLabelPair extends Wrapper {
-  constructor(existingContainer, inputId, inputTag = "input", options) {
+  constructor(singleKeyObj, label, forceTextarea, existingContainer) {
     super("div", existingContainer);
     __publicField(this, "container");
     __publicField(this, "label");
     __publicField(this, "input");
+    __publicField(this, "observer");
     this.container = this.element;
-    this.style("display:flex");
-    if (inputId === void 0)
-      inputId = Math.random().toString(36).slice(6);
-    this.label = this.newWrap("label").attr("for", inputId).text("Input");
-    this.input = this.newWrap(inputTag, { i: inputId });
-    if (options) {
-      if (options.contStyle)
-        this.style(options.contStyle);
-      if (options.inputStyle)
-        this.input.style(options.inputStyle);
-      if (options.lblStyle)
-        this.label.style(options.lblStyle);
-      if (options.lbl)
-        this.label.text(options.lbl);
-      if (options.placehold)
-        this.input.placehold(options.placehold);
-      if (options.default)
-        this.input.setVal(options.default);
-      if (options.inputType)
-        this.input.attr("type", options.inputType);
-      if (options.stacked && !options.contStyle && !options.inputStyle) {
-        this.style("display:block");
-        this.input.style("width: 100%; display: block");
-      }
-    }
+    this.style("display:flex; gap: 0.5em;");
+    let lbledInput = new LabeledInput(singleKeyObj, label, forceTextarea);
+    this.label = lbledInput.label;
+    this.input = lbledInput.input;
+    this.observer = lbledInput.observer;
   }
 }
-export { Binding, Observable, Observer, WrappedInputLabelPair, Wrapper };
+class DynamicForm {
+  constructor(obj, gridStyle, lblStyle, inputStyle, parentBreadCrumb) {
+    __publicField(this, "form");
+    __publicField(this, "parentBreadcrumb");
+    __publicField(this, "gridStyle");
+    __publicField(this, "lblStyle");
+    __publicField(this, "inputStyle");
+    __publicField(this, "lines");
+    __publicField(this, "values");
+    if (typeof obj != "object")
+      throw new Error("Primatives cannot be used to create DynamicForm instances.");
+    let items = Object.keys(obj);
+    this.lines = [[]];
+    this.inputStyle = inputStyle;
+    this.gridStyle = gridStyle;
+    this.lblStyle = lblStyle;
+    this.values = {};
+    this.parentBreadcrumb = parentBreadCrumb;
+    items.forEach((key) => {
+      let val = obj[key];
+      if (isPrimative(val) || isDate(val) || isArrayOfPrimatives(val)) {
+        let line = new LabeledInput({ [key]: obj[key] });
+        if (lblStyle)
+          line.label.style(lblStyle);
+        if (inputStyle)
+          line.input.style(inputStyle);
+        this.values[key] = line.observer;
+        this.lines.push([line.label, line.input]);
+      } else {
+        if (Array.isArray(val)) {
+          this.lines.push([new Wrapper("h4", void 0, { s: "margin-bottom: 0.25em", t: key })]);
+          val.forEach((i, j) => {
+            let subform = new DynamicForm(i, gridStyle, lblStyle, inputStyle, j);
+            if (this.values[key] == void 0)
+              this.values[key] = [];
+            this.values[key].push(subform);
+            this.lines.push([subform.form, "merge"]);
+          });
+        } else {
+          let subform = new DynamicForm(val, gridStyle, lblStyle, inputStyle, key);
+          this.values[key] = subform;
+          this.lines.push([subform.form, "merge"]);
+        }
+      }
+    });
+    let containerType = "form";
+    if (parentBreadCrumb)
+      containerType = "fieldset";
+    this.form = new Wrapper(containerType).addMultiWrap(this.lines);
+    if (parentBreadCrumb)
+      this.form.newWrap("legend").text(parentBreadCrumb.toString());
+    if (gridStyle)
+      this.form.style(this.form.getStyle() + "; " + gridStyle);
+  }
+  getFormData() {
+    let returnObj = {};
+    Object.keys(this.values).forEach((key) => {
+      if (this.values[key].constructor.name == "DynamicForm") {
+        returnObj[key] = this.values[key].getFormData();
+      } else if (Array.isArray(this.values[key])) {
+        let inside = [];
+        this.values[key].forEach((subform) => {
+          inside.push(subform.getFormData());
+        });
+        returnObj[key] = inside;
+      } else {
+        returnObj[key] = this.values[key].boundVal;
+      }
+    });
+    return returnObj;
+  }
+  addFormSection(obj, mapKey) {
+    let subform = new DynamicForm(obj, this.gridStyle, this.lblStyle, this.inputStyle, mapKey);
+    this.form.addRow([subform.form, "merge"]);
+    this.values[mapKey] = subform;
+    return this;
+  }
+  addInputToForm(singleKeyObj, label, forceTextarea) {
+    let key = Object.keys(singleKeyObj)[0];
+    if (Object.keys(this.getFormData()).some((existingKey) => existingKey === key))
+      console.warn("duplicate key detected: " + key);
+    let inputPair = new WrappedInputLabelPair(singleKeyObj, label, forceTextarea);
+    this.values[key] = inputPair.observer;
+    this.form.addRow([inputPair.label, inputPair.input]);
+    return this;
+  }
+}
+class WrapGrid extends Wrapper {
+  constructor(children2dArray, existingContainer, gapSizeCSS = "0.5em", containerType = "div") {
+    super(containerType, existingContainer);
+    __publicField(this, "rows");
+    __publicField(this, "cols");
+    this.style("display: grid; gap:" + gapSizeCSS);
+    this.rows = children2dArray.length;
+    this.cols = 0;
+    children2dArray.forEach((row) => {
+      if (row.length > this.cols)
+        this.cols = row.length;
+    });
+    children2dArray.forEach((row, i) => {
+      row.forEach((child, col) => {
+        if (child != "merge") {
+          let k = col + 1;
+          while (row[k] == "merge")
+            k++;
+          child.style(`
+                            ${child.getStyle()};
+                            grid-row: ${i + 1};
+                            grid-column: ${col + 1} / ${k + 1}
+                        `);
+          child.relocate(this, "inside");
+        }
+      });
+    });
+  }
+  addRow(row) {
+    row.forEach((child, col) => {
+      if (child != "merge") {
+        let k = col + 1;
+        while (row[k] == "merge")
+          k++;
+        child.style(`
+                        ${child.getStyle()};
+                        grid-row: ${this.rows + 1};
+                        grid-column: ${col + 1} / ${k + 1}
+                    `);
+        child.relocate(this, "inside");
+      }
+    });
+    this.rows = this.rows + 1;
+    return this;
+  }
+}
+const isPrimative = (myVar) => {
+  if (typeof myVar === "object")
+    return false;
+  if (typeof myVar === "function")
+    return false;
+  return true;
+};
+const isDate = (maybeDate) => {
+  if (isPrimative(maybeDate))
+    return false;
+  return Object.prototype.toString.call(maybeDate) === "[object Date]";
+};
+const isArrayOfPrimatives = (val) => {
+  if (!Array.isArray(val))
+    return false;
+  if (val.some((v) => !isPrimative(v)))
+    return false;
+  return true;
+};
+export { Binding, DynamicForm, LabeledInput, Observable, Observer, WrapGrid, WrappedInputLabelPair, Wrapper, isArrayOfPrimatives, isDate, isPrimative };

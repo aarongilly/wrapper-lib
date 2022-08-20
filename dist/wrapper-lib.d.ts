@@ -1,6 +1,6 @@
 /**
  * The Observable class is built to enable {@link Observer | Observers} to
- * observe. This means that Observers can follow the {@link obsVal} of the
+ * observe. This means that Observers can follow the {@link Observable.obsVal} of the
  * Observable they are bound to. See {@link Binding}.
  */
 export declare class Observable {
@@ -9,7 +9,7 @@ export declare class Observable {
     /**
      * Observables hold a value and notify Observers when the value is set.
      * They do this by maintaining a list of Bindings in which they are the 'to'
-     * object. Each time setVal is called they notify all subscribers in their
+     * object. Each time {@link Observable.setVal} is called they notify all subscribers in their
      * boundFrom list. setVal can be of any type. If a 'changeKey' is provided to
      * setVal, the changeKey string will be treated as a path to a property in the
      * obsVal object. E.G. setVal('hello','message.toWorld') would set the
@@ -87,7 +87,7 @@ export declare class Binding {
     changeKey?: string;
     xferFunc: Function;
     /**
-     * Bindings represent a connection between an Observable and an Observer.
+     * Bindings represent a connection between an {@link Observable} and an {@link Observer}.
      * They hold the xferFunction that changes the observable.obsVal into the
      * observer.boundVal. If they contain a changeKey, then only changes to
      * the Observable with that key will cause the Observer to update.
@@ -96,8 +96,8 @@ export declare class Binding {
      * @param changeKey if !undefined, only changes with this key will
      * propagate to the Observer.
      * @param xferFunc if !undefined, the xferFunction that will be applied
-     * to the new value of the Observable's obsVal to turn it into the new
-     * value of the Observer's boundVal.
+     * to the new value of the Observable's {@link Observable.obsVal} to turn it into the new
+     * value of the Observer's {@link Observer.boundVal}.
      * If no xferFunc is supplied, by default the boundVal will be set equal to obsVal.
      * If this function returns a non-null, non-undefined value,
      * that is the value that will be set.
@@ -133,38 +133,33 @@ export interface WrapperOptions {
     b?: Observable;
     iT?: InputType;
 }
-export interface WrappedInputLabelPairOptions {
-    lbl?: string;
-    default?: string;
-    placehold?: string;
-    inputType?: InputType;
-    contStyle?: string;
-    lblStyle?: string;
-    inputStyle?: string;
-    stacked?: boolean;
-}
-export interface FormInputSchema {
-    label: string;
-    inputType: InputType | 'object' | 'array';
-    required?: boolean;
-    placehold?: string;
-    default?: any;
-}
 export declare type ObservableFeature = "text" | "value" | "style";
 export declare type WrapperPosition = "inside" | "before" | "after";
 export declare type InputType = "button" | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "hidden" | "image" | "month" | "number" | "password" | "radio" | "range" | "reset" | "search" | "submit" | "tel" | "text" | "time" | "url" | "week";
 export declare class Wrapper extends Observable implements Observer {
     /**
-     * This is my description of the element property here. Yo. 😁
+     * The HTML Element the Wrapper is wrapping. The thing it's adding value to.
      */
     element: HTMLElement;
     /**
-     * These comments should be filled in to support TypeDoc
+     * The Wrapper whose wrapped HTML Element contains this.element.
      */
     parent: Wrapper | undefined;
+    /**
+     * All the Wrappers whose wrapped HTML Element is contained in this.element
+     */
     children: Wrapper[];
+    /**
+     * List of Observers who are watching this Wrapper.
+     */
     boundFrom: Binding[];
+    /**
+     * The Observable(s) whom this Wrapper is watching in some manner.
+     */
     boundTo: Binding[];
+    /**
+     * Holds the value the Wrapper sees in its Observable
+     */
     boundVal: any;
     /**
      * Wrappers 'wrap' HTMLElements and are utilized to make changes to them.
@@ -173,8 +168,8 @@ export declare class Wrapper extends Observable implements Observer {
      * @param tag the tag of the element to create (if existingElement == undefined)
      * @param existingElement the element to wrap. If undefined, an element will be
      * create on the document object, BUT WILL NOT BE VISIBLE UNTIL YOU APPEND IT TO SOMETHING
-     * @param intializers a map of {@link WrapperOptions} to initialize the Wrapper
-     * with. Can do things like setting the Wrapper's innerText with {'t':'my text'}
+     * @param intializers a map of {@link WrapperOptions} to initialize the Wrapper with,
+     * a shorthand for many methods
      */
     constructor(tag?: keyof HTMLElementTagNameMap, existingElement?: HTMLElement, intializers?: WrapperOptions);
     /**
@@ -442,34 +437,35 @@ export declare class Wrapper extends Observable implements Observer {
      * element. Useful for adding wrappers functions returned
      * by functions into the page.
      * @param child an existing Wrapper to insert to this one
-     * @returns this, for chaining
+     * @returns the CHILD that was added
      */
-    addWrapChild(child: Wrapper): this;
+    addChild(child: Wrapper): Wrapper;
     /**
      * Adds an existing Wrapper before this Wrapper's position
      * in the DOM. Useful for adding wrappers functions returned
      * by functions into the page.
      *
      * @param child an existing Wrapper to insert to this one
-     * @returns this, for chaining
+     * @returns the CHILD that was added
      */
-    addWrapBefore(child: Wrapper): this;
+    addBefore(child: Wrapper): Wrapper;
     /**
      * Adds an existing Wrapper after this Wrapper's position
      * in the DOM. Useful for adding wrappers functions returned
      * by functions into the page.
      * @param child an existing Wrapper to insert to this one
-     * @returns this, for chaining
+     * @returns the CHILD that was added
      */
-    addWrapAfter(child: Wrapper): this;
+    addAfter(child: Wrapper): Wrapper;
     /**
      * Adds a 2-D array of children into the container Wrapper
      * in accordance with where they are positioned in the array.
      * It will space them using the CSS String provided
      * @param children2dArray 2d Array of Wrappers to insert
-     * @param gapSizeCSS the space between them, e.g. '10px' or '1em' or '10%'
+     * @param gapSizeCSS the space between them, e.g. '10px' or '1em' or '10%'. Defaults to '0.5em'
+     * @returns this, for chaining
      */
-    addMultiWrap(children2dArray: Wrapper[][], gapSizeCSS: string): void;
+    addMultiWrap(children2dArray: (Wrapper | 'merge')[][], gapSizeCSS?: string, containerType?: keyof HTMLElementTagNameMap): WrapGrid;
     /**
      * Creates a new event listener of the given type on the Wrapped element
      * @param eventType type of event to bind the function to
@@ -522,25 +518,160 @@ export declare class Wrapper extends Observable implements Observer {
      */
     selectContent(textList: string[], valList?: string[], idList?: string[]): this;
     /**
-     * Creates a flexbox-wrapped label & input pair
-     * @param inputTag input or textarea
-     * @param id the id to use for the input element
-     * @param location where the labeled input should be in relation to its caller
-     * @returns the Wrapper (for the outer div)
+     * Creates a flexbox-wrapped label & input pair based on the single-keyed object passed in.
+     * Will attempt to parse the type of the value and return the correct input type.
+     * @param singleKeyObj object for which the form should be made
+     * @param label override the label text
+     * @param forceTextarea if set, forces a textarea (true) or text input (false)
+     * @param location where to put the the top-level wrapper in relation to this
+     * @returns array of [topWrapper, lblWrapper, inputWrapper, observer]
      */
-    makeLabeledInput(id: string, inputTag?: 'input' | 'textarea', location?: WrapperPosition, options?: WrappedInputLabelPairOptions): WrappedInputLabelPair;
+    makeInputFor(singleKeyObj: {
+        [key: string]: any;
+    }, label?: string, forceTextarea?: boolean, location?: WrapperPosition): WrappedInputLabelPair;
+    /**
+     * Creates a {@link DynamicForm} from an Object with multiple keys.
+     * @param obj the object to create the DynamicForm against
+     * @param gridStyle the css styles to apply to the grid
+     * @param lblStyle the css styles to apply to the label
+     * @param inputStyle the css styles to apply to the input
+     * @returns the created {@link DynamicForm}
+     */
+    makeFormFor(obj: Record<string, any>, gridStyle?: string, lblStyle?: string, inputStyle?: string): DynamicForm;
 }
+/**
+ * LabeledInput is a class meant to make it easier to create individual HTML Inputs,
+ * labels that are associated with them, and an Observer to watch the value of the input.
+ */
+export declare class LabeledInput {
+    label: Wrapper;
+    input: Wrapper;
+    observer: Observer;
+    /**
+     * Creates a label, an input, and an Observer, all wired together.
+     * Will interpret the type of variable and return an appropriate input flavor.
+     * Text strings of 100 or more characters will default as textareas.
+     * @param singleKeyObj an object with a single key & value, the value is of type primative | date | (string|number)[]
+     * @param label the label to apply to the input, defaults to the key of the object
+     * @param forceTextarea if specified, will force inputs to be either textareas (if true) or regular text inputs (if false)
+     */
+    constructor(singleKeyObj: {
+        [key: string]: any;
+    }, label?: string, forceTextarea?: boolean);
+}
+/**
+ * This class is a Wrapper-bound {@link LabeledInput}.
+ */
 export declare class WrappedInputLabelPair extends Wrapper {
     container: HTMLElement;
     label: Wrapper;
     input: Wrapper;
+    observer: Observer;
     /**
-     * Creates 3 Wrappers. An outer, containing Wrapper (div) with an input Wrapper
-     * and a label Wrapper inside it. The input is bound to the container by the inputId
+     * Creates 3 Wrappers and an Observer. An outer, containing Wrapper (div) with an input Wrapper
+     * and a label Wrapper inside it. The input is bound to the container by the inputId.
+     * By default the container style is set to 'display: flex; gap: 0.5em'
      * @param existingContainer Where to put the WrappedInputLabelPair
-     * @param inputId the id of the input element, used in the 'for' property of the label
-     * @param inputTag the type of input
-     * @param options a map of {@link WrappedInputLabelPairOptions}
+     * @param label text to use for the label (defaults to the object's key)
+     * @param forceTextarea if set, will force input to be text area (if true) or to be regular text input (if false), defaults false for strings of <100 chars
+     * @param existingContainer optional, the HTML Element to use to host the Wrapper
      */
-    constructor(existingContainer?: HTMLElement, inputId?: string, inputTag?: "input" | "textarea" | "select", options?: WrappedInputLabelPairOptions);
+    constructor(singleKeyObj: {
+        [key: string]: any;
+    }, label?: string, forceTextarea?: boolean, existingContainer?: HTMLElement);
 }
+/**
+ * Dynamic Form instances allow you to build a simple input UI seeded from an arbirarily complex Object
+ * (the Object cannot have self-referential pointers, but most don't).
+ * It allows the user to update the form, and for you to quickly pull a new Object that reflects the
+ * user's updates.
+ *
+ * Currently Forms are limited to 2 columns.
+ *
+ * Wow I can't believe I got this working so quickly.
+ */
+export declare class DynamicForm {
+    form: WrapGrid;
+    parentBreadcrumb?: string | number;
+    gridStyle?: string;
+    lblStyle?: string;
+    inputStyle?: string;
+    private lines;
+    private values;
+    /**
+     * Creates a new {@link DynamicForm} instance.
+     * @param obj the object the form should be based on
+     * @param gridStyle the css styles to apply to the grid
+     * @param lblStyle the css styles to apply to the label
+     * @param inputStyle the css styles to apply to the input
+     * @param parentBreadCrumb probably don't set this manually, it's used when creating subforms via {@link DynamicForm.addFormSection}
+     */
+    constructor(obj: Record<string, any>, gridStyle?: string, lblStyle?: string, inputStyle?: string, parentBreadCrumb?: string | number);
+    /**
+     * Get Form Data allows you to construct a single, possibly nested object
+     * representing the current state of the form.
+     * @returns a NEW object shaped like the object the DynamicForm was built from, with its current contents
+     */
+    getFormData(): any;
+    /**
+     * Adds a new section to the form containing inputs for the passed in object.
+     * The new section will be included when calling {@link getFormData} on the DynamicForm.
+     * @param obj an object to create a section for
+     * @param mapKey the header for this section & the key for the object upon getFormData
+     * @returns this, for chaining.
+     */
+    addFormSection(obj: Record<string, any>, mapKey: string): this;
+    /**
+     * Append new row to the bottom of the form based on the passed-in object.
+     * The new row will be included when calling {@link getFormData} on the DynamicForm
+     * @param singleKeyObj an object with one key and a primative (or date, or array of strings) value
+     * @param label the text to set for the input label, defaults to the object key
+     * @param forceTextarea if set, will force the input to be a text area (if true) or a regular text input (if false)
+     * @returns this, for chaining.
+     */
+    addInputToForm(singleKeyObj: {
+        [key: string]: any;
+    }, label?: string, forceTextarea?: boolean): this;
+}
+/**
+ * WrapGrid is a class to create css grid layouts using 2D arrays of wrappers.
+ */
+export declare class WrapGrid extends Wrapper {
+    private rows;
+    private cols;
+    /**
+     * Creates a new WrapGrid, a css Grid of {@link Wrapper} instances in a 2d Array.
+     * Grid cells can be merged by inserting 'merge' strings in the place of Wrappers in the array.
+     * @param children2dArray a 2D array of Wrappers and the string 'merge'.
+     * @param existingContainer Optional, if specified, the WrapGrid will fill in the provided Element
+     * @param gapSizeCSS the gap size between items on the grid, defaults to '0.5em'
+     * @param containerType the HTML Tag for the container, defaults to 'div'
+     */
+    constructor(children2dArray: (Wrapper | "merge")[][], existingContainer?: HTMLElement, gapSizeCSS?: string, containerType?: keyof HTMLElementTagNameMap);
+    /**
+     * Adds a row to the bottom of the WrapGrid.
+     * Works best if the row contains the same number of
+     * array elements as the grid is wide.
+     * @param row array of Wrappers or the string 'merge'
+     * @returns this, for chaining
+     */
+    addRow(row: (Wrapper | 'merge')[]): WrapGrid;
+}
+/**
+ * Checks whether the given input is a primative value.
+ * @param myVar variable to check
+ * @returns true if variable is primative, false if an object or a function
+ */
+export declare const isPrimative: (myVar: any) => boolean;
+/**
+ * Checks whether the given input is a Date object
+ * @param maybeDate variable to check
+ * @returns true if variable is a Date object
+ */
+export declare const isDate: (maybeDate: any) => boolean;
+/**
+ * Checks whether the given input is an array of primatives
+ * @param val variable to check
+ * @returns true if is an array of primatives (or an empty array)
+ */
+export declare const isArrayOfPrimatives: (val: any) => boolean;
