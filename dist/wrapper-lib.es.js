@@ -573,7 +573,7 @@ class DynamicForm {
         if (Array.isArray(val)) {
           this.lines.push([new Wrapper("h4", void 0, { s: "margin-bottom: 0.25em", t: key })]);
           val.forEach((i, j) => {
-            let subform = new DynamicForm(i, gridStyle, lblStyle, inputStyle, j);
+            let subform = new DynamicForm(i, gridStyle, lblStyle, inputStyle, j.toString());
             if (this.values[key] == void 0)
               this.values[key] = [];
             this.values[key].push(subform);

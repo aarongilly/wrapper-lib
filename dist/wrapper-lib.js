@@ -1066,7 +1066,7 @@ export class DynamicForm {
                 if (Array.isArray(val)) {
                     this.lines.push([new Wrapper('h4', undefined, { s: "margin-bottom: 0.25em", t: key })]);
                     val.forEach((i, j) => {
-                        let subform = new DynamicForm(i, gridStyle, lblStyle, inputStyle, j); //RECURSION
+                        let subform = new DynamicForm(i, gridStyle, lblStyle, inputStyle, j.toString()); //RECURSION
                         if (this.values[key] == undefined)
                             this.values[key] = [];
                         this.values[key].push(subform); // = subform;
