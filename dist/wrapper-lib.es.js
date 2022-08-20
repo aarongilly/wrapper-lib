@@ -364,6 +364,31 @@ class Wrapper extends Observable {
     this.element.setAttribute("data-" + key, val);
     return this;
   }
+  addWrapChild(child) {
+    child.relocate(this, "inside");
+    this.children.push(child);
+    return this;
+  }
+  addWrapBefore(child) {
+    child.relocate(this, "before");
+    return this;
+  }
+  addWrapAfter(child) {
+    child.relocate(this, "after");
+    return this;
+  }
+  addMultiWrap(children2dArray, gapSizeCSS) {
+    this.style("display: grid; gap:" + gapSizeCSS);
+    children2dArray.forEach((row, i) => {
+      row.forEach((child, j) => {
+        child.style(`
+                    ${child.getStyle()}; 
+                    grid-row: ${i + 1}; 
+                    grid-column: ${j + 1}`);
+        child.relocate(this, "inside");
+      });
+    });
+  }
   onEvent(eventType, fun) {
     this.element.addEventListener(eventType, (e) => fun(e));
     return this;

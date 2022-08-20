@@ -173,15 +173,18 @@ export class Binding {
                 this.xferFunc = () => {
                     let pathParts = changeKey.split('.');
                     let target = this.to.getVal();
-                    pathParts.forEach(p => {
-                        if (target.hasOwnProperty(p)) {
-                            target = target[p]
-                        } else {
-                            console.warn(`
-                            Attempting to traverse bound path '${changeKey}' 
-                            failed at '${p}'`)
-                        }
-                    })
+                    // console.log(pathParts);
+                    if (typeof target == 'object') { //added this if 2022/08/19 in troubleshooting effort
+                        pathParts.forEach(p => {
+                            if (target.hasOwnProperty(p)) {
+                                target = target[p]
+                            } else {
+                                console.warn(`
+                                Attempting to traverse bound path '${changeKey}' 
+                                failed at '${p}'`)
+                            }
+                        })
+                    }
                     this.from.boundVal = target;
                 };
             } else {
@@ -200,6 +203,8 @@ export class Binding {
      * this's changeKey value in order to propagate the change.
      */
     public handleChange(newVal: any, changeKey?: string) {
+        // console.log(this, newVal, changeKey);
+
         if (changeKey == this.changeKey) {
             let xferResult = this.xferFunc(newVal, changeKey)!;
             if (xferResult != null && xferResult != undefined) {
@@ -248,13 +253,13 @@ export interface WrappedInputLabelPairOptions {
     stacked?: boolean
 }
 
-export interface FormInputSchema {
-    label: string,
-    inputType: InputType | 'object' | 'array',
-    required?: boolean,
-    placehold?: string,
-    default?: any, //string | number | boolean,
-}
+// export interface FormInputSchema {
+//     label: string,
+//     inputType: InputType | 'object' | 'array',
+//     required?: boolean,
+//     placehold?: string,
+//     default?: any, //string | number | boolean,
+// }
 
 export type ObservableFeature = "text" | "value" | "style"
 export type WrapperPosition = "inside" | "before" | "after"
@@ -619,8 +624,8 @@ export class Wrapper extends Observable implements Observer { //implements Obser
     /**
      * Removes any child wrappers from the parent wrapper
      */
-     killChildren() {
-        this.children.forEach((child)=>{
+    killChildren() {
+        this.children.forEach((child) => {
             child.kill();
         })
     }
@@ -752,12 +757,12 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * element. Useful for adding wrappers functions returned
      * by functions into the page.
      * @param child an existing Wrapper to insert to this one
-     * @returns this, for chaining
+     * @returns the CHILD that was added
      */
-    addWrapChild(child: Wrapper){
+    addChild(child: Wrapper) {
         child.relocate(this, 'inside');
         this.children.push(child);
-        return this;
+        return child;
     }
 
     /**
@@ -766,11 +771,10 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * by functions into the page.
      * 
      * @param child an existing Wrapper to insert to this one
-     * @returns this, for chaining
+     * @returns the CHILD that was added
      */
-     addWrapBefore(child: Wrapper){
-        child.relocate(this, 'before');
-        return this;
+    addBefore(child: Wrapper) {
+        return child.relocate(this, 'before');
     }
 
     /**
@@ -778,11 +782,10 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * in the DOM. Useful for adding wrappers functions returned
      * by functions into the page.
      * @param child an existing Wrapper to insert to this one
-     * @returns this, for chaining
+     * @returns the CHILD that was added
      */
-     addWrapAfter(child: Wrapper){
-        child.relocate(this, 'after');
-        return this;
+    addAfter(child: Wrapper) {
+        return child.relocate(this, 'after');
     }
 
     /**
@@ -790,20 +793,33 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * in accordance with where they are positioned in the array.
      * It will space them using the CSS String provided
      * @param children2dArray 2d Array of Wrappers to insert
-     * @param gapSizeCSS the space between them, e.g. '10px' or '1em' or '10%'
+     * @param gapSizeCSS the space between them, e.g. '10px' or '1em' or '10%'. Defaults to '0.5em'
+     * @returns this, for chaining
      */
-    addMultiWrap(children2dArray: Wrapper[][], gapSizeCSS: string){
+    addMultiWrap(children2dArray: Wrapper[][], gapSizeCSS: string = "0.5em") {
         this.style('display: grid; gap:' + gapSizeCSS)
-        children2dArray.forEach((row, i)=>{
-            row.forEach((child, j)=>{
-                child.style(`
-                    ${child.getStyle()}; 
-                    grid-row: ${i+1}; 
-                    grid-column: ${j+1}`
+        let columnCount = 0;
+        children2dArray.forEach((row) => { if (row.length > columnCount) columnCount = row.length })
+        children2dArray.forEach((row, i) => {
+            if (row.length == 1) {
+                row[0].style(`
+                ${row[0].getStyle()}; 
+                grid-row: ${i + 1}; 
+                grid-column: 1 / ${columnCount+1}
+                `)
+                row[0].relocate(this,'inside')
+            } else {
+                row.forEach((child, j) => {
+                    child.style(`
+                        ${child.getStyle()}; 
+                        grid-row: ${i + 1}; 
+                        grid-column: ${j + 1}`
                     )
-                child.relocate(this,'inside');
-            })
+                    child.relocate(this, 'inside');
+                })
+            }
         })
+        return this
     }
 
     /**
@@ -928,175 +944,304 @@ export class Wrapper extends Observable implements Observer { //implements Obser
         return this;
     }
 
+    // /**
+    //  * Creates a flexbox-wrapped label & input pair
+    //  * @param inputTag input or textarea
+    //  * @param id the id to use for the input element
+    //  * @param location where the labeled input should be in relation to its caller
+    //  * @returns the Wrapper (for the outer div)
+    //  */
+    // makeLabeledInput(id: string, inputTag?: 'input' | 'textarea', location?: WrapperPosition, options?: WrappedInputLabelPairOptions): WrappedInputLabelPair {
+    //     let container = this.newWrap('div', undefined, location)
+    //     inputTag = (inputTag === undefined) ? 'input' : inputTag;
+    //     location = (location === undefined) ? 'inside' : location;
+    //     let lbldInpt = new WrappedInputLabelPair(container.element, id, (<'input' | 'textarea'>inputTag), options);
+    //     return lbldInpt;
+    // }
+
+
     /**
-     * Creates a flexbox-wrapped label & input pair
-     * @param inputTag input or textarea
-     * @param id the id to use for the input element
-     * @param location where the labeled input should be in relation to its caller
-     * @returns the Wrapper (for the outer div)
+     * Creates a flexbox-wrapped label & input pair based on the single-keyed object passed in.
+     * Will attempt to parse the type of the value and return the correct input type.
+     * @param singleKeyObj object for which the form should be made
+     * @param label override the label text
+     * @param forceTextarea if set, forces a textarea (true) or text input (false)
+     * @param location where to put the the top-level wrapper in relation to this
+     * @returns array of [topWrapper, lblWrapper, inputWrapper, observer]
      */
-    makeLabeledInput(id: string, inputTag?: 'input' | 'textarea', location?: WrapperPosition, options?: WrappedInputLabelPairOptions): WrappedInputLabelPair {
-        let container = this.newWrap('div', undefined, location)
-        inputTag = (inputTag === undefined) ? 'input' : inputTag;
-        location = (location === undefined) ? 'inside' : location;
-        let lbldInpt = new WrappedInputLabelPair(container.element, id, (<'input' | 'textarea'>inputTag), options);
-        return lbldInpt;
+    makeInputFor(singleKeyObj: { [key: string]: any }, label?: string, forceTextarea?: boolean, location: WrapperPosition = 'inside') {
+        let container = this.newWrap('div', undefined, location).style('display: flex;')
+        let inputPair = new WrappedInputLabelPair(singleKeyObj, label, forceTextarea, container.element);
+        container.addChild(inputPair.label);
+        container.addChild(inputPair.input);
+        return inputPair
     }
 
-    
-    // /**
-    //  * Creates a flexbox-wrapped label & input pair based on the single-keyed object passed in.
-    //  * @param singleKeyObj - 
-    //  * @param location 
-    //  * @returns 
-    //  */
-    // makeInputFor(singleKeyObj: { [key: string]: any }, location: WrapperPosition = 'inside') {
-    //     if (typeof singleKeyObj != 'object') throw new Error("Primatives cannot be passed to makeInputFor");
-    //     if (Object.keys(singleKeyObj).length > 1) console.warn("More than one key was passed into makeInputFor. Other keys were ignored");
-    //     const key = Object.keys(singleKeyObj)[0]
-    //     const val = singleKeyObj[key];
-    //     let type: InputType | 'select' | 'textarea' = 'text';
-    //     if (typeof val === 'number') type = "number";
-    //     if (typeof val === 'boolean') type = "checkbox";
-    //     if (typeof val === 'string' && val.length > 99) type = 'textarea'; //maybe a bad idea
-    //     if (Array.isArray(val)) {
-    //         type = 'select';
-    //         //above if is nested to provide for this 'else' condition
-    //     } else if (typeof val === "object") {
-    //         if (Object.prototype.toString.call(val) === "[object Date]") {
-    //             type = 'date';
-    //         } else {
-    //             console.warn("Still need to handle plain objects");
-    //             this.makeFormSectionFor(key, val)
-    //         }
-    //     }
-    //     let inputTag = 'input';
-    //     if (type === 'textarea' || type === 'select') inputTag = type;
+    /**
+     * Creates a form from an Object with multiple keys.
+     * @param obj 
+     * @param location 
+     * @returns 
+     */
+    makeFormFor(obj: Record<string, any>, gridStyle?: string, lblStyle?: string, inputStyle?: string) {
+        if (typeof obj != 'object') throw new Error("Primatives cannot be used to create LabeledInput instances.");
+        let items = Object.keys(obj);
+        let lines: Wrapper[][] = [[]]
 
-    //     let inputPair = new WrappedInputLabelPair(undefined, key, (<'input' | 'textarea' | 'select'>inputTag));
-    //     inputPair.label.text(key).style('margin-right: 0.5rem');
-    //     if (type != 'select' && type != 'textarea') inputPair.input.inputType(type);
-    //     console.log(val);
-    //     if (type == 'select') {
-    //         inputPair.input.selectContent(val);
-    //     } else if (type == 'date') {
-    //         inputPair.input.setVal(val.toISOString().substring(0, 10));
-    //     } else {
-    //         inputPair.input.setVal(val);
-    //     }
+        items.forEach(key => {
+            let line = new LabeledInput({ [key]: obj[key] });
+            if (lblStyle) line.label.style(lblStyle);
+            if (inputStyle) line.input.style(inputStyle);
+            lines.push([line.label, line.input])
+        })
+        let form = this.newWrap('form').addMultiWrap(lines);
+        if (gridStyle) form.style(form.getStyle() + "; " + gridStyle)
+        return form
+    }
+}
 
-    //     if (location === 'inside') {
-    //         this.element.appendChild(inputPair.element);
-    //         this.children.push(inputPair);
-    //         inputPair.parent = this;
-    //     }
-    //     if (location === 'after') this.element.after(inputPair.element);
-    //     if (location === 'before') this.element.before(inputPair.element);
-    //     return inputPair;
-    // }
 
-    // makeFormFor(obj: Record<string, any>, schema?: Record<string, FormInputSchema>, location: WrapperPosition = 'inside') {
-    //     let form = this.newWrap('form', undefined, location);
-    //     let keys = Object.keys(obj);
-    //     let parsedObj: Record<string, FormInputSchema> = {};
-    //     keys.forEach(k => {
-    //         if(schema){
-    //             //todo - check and augment schema with default
-    //         } //todo - make this 'else' clause
-    //         /*
-    //         label: string,
-    //         inputType: InputType,
-    //         required?: boolean,
-    //         placehold?: string,
-    //         default?: any, //string | number | boolean,
-    //         */
-    //         let inferredSchema: FormInputSchema = {
-    //             label: k,
-    //             inputType: Wrapper.inferType(obj[k]),
-    //             required: false,
-    //             default: obj[k]
-    //         }
-    //         //TODO - implement this
-    //         parsedObj[k] = inferredSchema;
-    //     })
-    //     let vals = Object.values(obj);
-    //     let types = vals.map(v => Wrapper.inferType(v));
+/**
+ * LabeledInput is a class meant to make it easier to create individual HTML Inputs,
+ * labels that are associated with them, and an Observer to watch the value of the input. 
+ */
+export class LabeledInput {
+    public label: Wrapper;
+    public input: Wrapper;
+    public observer: Observer
 
-    // }
+    /**
+     * Creates a label, an input, and an Observer, all wired together.
+     * Will interpret the type of variable and return an appropriate input flavor.
+     * Text strings of 100 or more characters will default as textareas.
+     * @param singleKeyObj 
+     * @param label 
+     * @param forceTextarea if specified, will force inputs to be either textareas (if true) or regular text inputs (if false)
+     */
+    constructor(singleKeyObj: { [key: string]: any }, label?: string, forceTextarea?: boolean) {
+        if (typeof singleKeyObj != 'object') throw new Error("Primatives cannot be used to create LabeledInput instances.");
+        if (Object.keys(singleKeyObj).length > 1) console.warn("More than one key was passed into makeInputFor. Other keys were ignored");
 
-    // //TODO - implement this
-    // private makeFormSectionFor(sectionLabel: string, obj: object, objNestPath: string = "", schema?: Record<string, FormInputSchema>, location: WrapperPosition = 'inside') {
-    //     return 'hi'
-    // }
+        const key = Object.keys(singleKeyObj)[0]
+        const val = singleKeyObj[key];
+        const lbl = label ? label : key;
 
-    // /**
-    //  * Internal use, infers the type of a variable and returns a string describing it
-    //  * @param input variable to check 
-    //  * @returns string describing the variable type
-    //  */
-    // private static inferType(input: any): 'text' | 'number' | 'checkbox' | 'array' | 'date' | 'object' {
-    //     if (typeof input === 'string') return 'text'
-    //     if (typeof input === 'number' || typeof input === 'bigint') return 'number'
-    //     if (typeof input === 'boolean') return 'checkbox'
-    //     if (Array.isArray(input)) return 'array'
-    //     if (Object.prototype.toString.call(input) === "[object Date]") return 'date'
-    //     return 'object'
-    // }
+        let inputId = Math.random().toString(36).slice(7); //make random id
+        this.label = new Wrapper('label').attr('for', inputId).text(lbl);
+
+        //infer type
+        let type: InputType | 'select' | 'textarea' = 'text';
+        if (typeof val === 'number') type = "number";
+        if (typeof val === 'boolean') type = "checkbox";
+        if (typeof val === 'string' && val.length > 99) type = 'textarea';
+        if (Array.isArray(val)) {
+            if (isArrayOfPrimatives(val)) {
+                type = 'select';
+            } else {
+                console.warn("An array of Objects is not supported by LabeledInput");
+            }
+        } else if (typeof val === "object") {
+            if (Object.prototype.toString.call(val) === "[object Date]") {
+                type = 'date';
+            } else {
+                console.warn("Create a DynamicForm instance instead of a LabeledInput. (i.e. New DyanmicForm or wrapper.makeFormFor(...)");
+                //this.makeFormSectionFor(key, val)
+            }
+        }
+        let inputTag: keyof HTMLElementTagNameMap = 'input';
+        if (forceTextarea != undefined) {
+            if (forceTextarea) {
+                type = 'textarea'
+            } else {
+                type = 'text'
+            }
+        }
+
+        //use type to build input & set it's value
+        if (type === 'textarea' || type === 'select') {
+            this.input = new Wrapper(type, undefined, { i: inputId });
+            if (type === 'select') {
+                this.input.selectContent(val);
+            }
+        } else {
+            this.input = new Wrapper(inputTag, undefined, { i: inputId, iT: type });
+        }
+        this.observer = new Observer();
+        this.observer.bindTo(this.input, 'value');
+
+        if (type == 'date') {
+            this.input.setVal(val.toISOString().substr(0, 10))
+        } else if (type === 'checkbox') {
+            this.observer.boundVal = val; //not sure why I have to do this
+            if (val === true) this.input.setAttr('checked', '')
+        } else {
+            this.input.setVal(val)
+        }
+    }
 }
 
 export class WrappedInputLabelPair extends Wrapper {
     public container: HTMLElement;
     public label: Wrapper;
     public input: Wrapper;
+    public observer: Observer
     /**
-     * Creates 3 Wrappers. An outer, containing Wrapper (div) with an input Wrapper
-     * and a label Wrapper inside it. The input is bound to the container by the inputId
+     * Creates 3 Wrappers and an Observer. An outer, containing Wrapper (div) with an input Wrapper
+     * and a label Wrapper inside it. The input is bound to the container by the inputId.
+     * By default the container style is set to 'display: flex; gap: 0.5em'
      * @param existingContainer Where to put the WrappedInputLabelPair
-     * @param inputId the id of the input element, used in the 'for' property of the label
-     * @param inputTag the type of input
-     * @param options a map of {@link WrappedInputLabelPairOptions}
+     * @param label text to use for the label (defaults to the object's key)
+     * @param forceTextarea if set, will force input to be text area (if true) or to be regular text input (if false), defaults false for strings of <100 chars
+     * @param existingContainer optional, the HTML Element to use to host the Wrapper
      */
-    constructor(existingContainer?: HTMLElement, inputId?: string, inputTag: "input" | "textarea" | "select" = 'input', options?: WrappedInputLabelPairOptions) {
+    constructor(singleKeyObj: { [key: string]: any }, label?: string, forceTextarea?: boolean, existingContainer?: HTMLElement,) {
         super('div', existingContainer);
         this.container = this.element;
-        this.style('display:flex');
-        if (inputId === undefined) inputId = Math.random().toString(36).slice(6); //make random id
-        this.label = this.newWrap('label').attr('for', inputId).text('Input');
-        this.input = this.newWrap(inputTag, { i: inputId });
-        if (options) {
-            if (options.contStyle) this.style(options.contStyle!);
-            if (options.inputStyle) this.input.style(options.inputStyle);
-            if (options.lblStyle) this.label.style(options.lblStyle);
-            if (options.lbl) this.label.text(options.lbl);
-            if (options.placehold) this.input.placehold(options.placehold);
-            if (options.default) this.input.setVal(options.default);
-            if (options.inputType) this.input.attr('type', options.inputType);
-            if (options.stacked && !options.contStyle && !options.inputStyle) {
-                this.style('display:block');
-                this.input.style('width: 100%; display: block')
-            }
-        }
+        this.style('display:flex; gap: 0.5em;');
+        let lbledInput = new LabeledInput(singleKeyObj, label, forceTextarea)
+        this.label = lbledInput.label;
+        this.input = lbledInput.input;//.style('flex-grow: 1');
+        this.observer = lbledInput.observer;
     }
 }
 
-/*
-export function debounce(this: any, func: Function, timeout = 300){ //special fake 'this' param
-	let timer: NodeJS.Timer;
-	return (...args: any) =>{
-		clearTimeout(timer);
-		timer = setTimeout(()=> { func.apply(this, args); }, timeout);
-	};
+/**
+ * Dynamic Form instances allow you to build a simple input UI seeded from an arbirarily complex Object
+ * (the Object cannot have self-referential pointers, but most don't).
+ * It allows the user to update the form, and for you to quickly pull a new Object that reflects the
+ * user's updates.
+ * 
+ * Wow I can't believe I got this working so quickly.
+ */
+export class DynamicForm {
+    public form: Wrapper;
+    public parentBreadcrumb?: string | number;
+    private values: Record<string, any>;
+    constructor(obj: Record<string, any>, gridStyle?: string, lblStyle?: string, inputStyle?: string, parentBreadCrumb?: string | number, fieldsetTitle?: string) {
+        if (typeof obj != 'object') throw new Error("Primatives cannot be used to create DynamicForm instances.");
+        let items = Object.keys(obj);
+        let lines: Wrapper[][] = [[]]
+        this.values = {};
+        this.parentBreadcrumb = parentBreadCrumb;
+
+        items.forEach(key => {
+            let val = obj[key];
+            if (isPrimative(val) || isDate(val) || isArrayOfPrimatives(val)) {
+                let line = new LabeledInput({ [key]: obj[key] });
+                //make a simple input
+                if (lblStyle) line.label.style(lblStyle);
+                if (inputStyle) line.input.style(inputStyle);
+                this.values[key] = line.observer;
+                lines.push([line.label, line.input]);
+            } else {
+                //make a form section
+                if(Array.isArray(val)){
+                    //Array of Objects sort of works, but it's #BUGgy, looks weird & turns into number-indexed object
+                    lines.push([new Wrapper('h4', undefined, {s: "margin-bottom: 0.25em", t: key})]);
+                    val.forEach((i, j)=>{
+                        let subform = new DynamicForm(i,gridStyle,lblStyle,inputStyle,j,j.toString()) //RECURSION
+                        if(this.values[key]==undefined) this.values[key] = [];
+                        this.values[key].push(subform);// = subform;
+                        lines.push([subform.form]);
+                    })
+                }else{
+                    let subform = new DynamicForm(val,gridStyle,lblStyle,inputStyle,key,key) //RECURSION
+                    this.values[key] = subform;
+                    lines.push([subform.form]);
+                }
+            }
+        })
+        let containerType: keyof HTMLElementTagNameMap = 'form';
+        if(fieldsetTitle) containerType = 'fieldset'
+        this.form = new Wrapper(containerType).addMultiWrap(lines);
+        if(fieldsetTitle) this.form.newWrap('legend').text(fieldsetTitle)
+        if (gridStyle) this.form.style(this.form.getStyle() + "; " + gridStyle)
+    }
+
+    /**
+     * Get Form Data allows you to construct a single, possibly nested object
+     * representing the current state of the form. 
+     * @returns a NEW object shaped like the object the DynamicForm was built from, with its current contents
+     */
+    getFormData() {
+        let returnObj: any = {};   
+        Object.keys(this.values).forEach(key => {
+            if(this.values[key].constructor.name == 'DynamicForm'){
+                returnObj[key] = this.values[key].getFormData(); //RECURSION         
+            }else if(Array.isArray(this.values[key])){
+                let inside: DynamicForm[] = []
+                this.values[key].forEach((subform: DynamicForm)=>{
+                    inside.push(subform.getFormData()); //RESCURSION
+                })
+                returnObj[key] = inside            
+            }else{
+                returnObj[key] = this.values[key].boundVal            
+            }
+        })
+        return returnObj
+    }
+
+    // addFormSection(obj: Record<string, any>, gridStyle?: string, lblStyle?: string, inputStyle?: string, parentBreadCrumb?: string | number, fieldsetTitle?: string) {
+    //     //TODO - idea here is to enable the developer to incrementally build a form at runtime
+    // }
+
+    // addInputToForm(){
+    //     //TODO - same idea as above, but not creating a whole new section
+    // }
 }
+
+// Other things I might do...
+
+/**
+ * Checks whether the given input is a primative value.
+ * @param myVar variable to check
+ * @returns true if variable is primative, false if an object or a function
+ */
+export const isPrimative = (myVar: any): boolean => {
+    if (typeof myVar === 'object') return false;
+    if (typeof myVar === 'function') return false;
+    return true;
+}
+
+/**
+ * Checks whether the given input is a Date object
+ * @param maybeDate variable to check
+ * @returns true if variable is a Date object
+ */
+export const isDate = (maybeDate: any): boolean => {
+    if (isPrimative(maybeDate)) return false;
+    return Object.prototype.toString.call(maybeDate) === "[object Date]";
+}
+
+/**
+ * Checks whether the given input is an array of primatives
+ * @param val variable to check
+ * @returns true if is an array of primatives (or an empty array)
+ */
+export const isArrayOfPrimatives = (val: any): boolean => {
+    if (!Array.isArray(val)) return false;
+    if (val.some(v => !isPrimative(v))) return false;
+    return true;
+}
+
+/*
+//len is any number between 0 and 10
+export const newTinyId = function(len=4){ return new Date().getTime().toString(36)+"."+Math.random().toString(36).slice(13-len).padStart(len,"0") }
+
+//this will pull the date portion of the mkId and will parse the mkTt
+export const parseTidyIdDate = function(tinyId:string){new Date(parseInt(tinyId.split(".")[0],36))}
+
 */
 
-// export function makeLabledInput(singleKeyObject: {[key: string]: any}): WrappedInputLabelPair
-//     if(typeof singleKeyObject != 'object') throw new Error("Primatives cannot be passed to makeLabeledInput");
-//     if(Object.keys(singleKeyObject).length > 1) console.warn("More than one key was passed into makeLabeledInput. Other keys were ignored");
-//     const key = Object.keys(singleKeyObject)[0]
-//     const val = singleKeyObject[key];
-
-//     let pair = new WrappedInputLabelPair()
-// }
+/*
+export function debounce(this: any, func: Function, timeout = 300){ //special fake 'this' param
+    let timer: NodeJS.Timer;
+    return (...args: any) =>{
+        clearTimeout(timer);
+        timer = setTimeout(()=> { func.apply(this, args); }, timeout);
+    };
+}
+*/
 
 /*
 export class WrappedModal extends Wrapper{
