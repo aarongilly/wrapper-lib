@@ -611,6 +611,7 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * Removes the element associated with the wrapper from the page
      */
     kill() {
+        // this.killChildren(); //don't believe this is necessary
         this.element.remove();
     }
 
@@ -641,7 +642,7 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * @param location where to put this wrapper relative to the other
      * @returns this, for chaining
      */
-    relocate(relativeTo: Wrapper, location: "inside" | "after" | "before") {
+    relocate(relativeTo: Wrapper, location: "inside" | "after" | "before" = 'inside') {
         if (location === 'inside') relativeTo.element.appendChild(this.element);
         if (location === 'before') relativeTo.element.before(this.element);
         if (location === 'after') relativeTo.element.after(this.element);
@@ -850,6 +851,50 @@ export class Wrapper extends Observable implements Observer { //implements Obser
         return this;
     }
 
+    /**
+     * * Will attempt to disabled the wrapped element. 
+     * Won't throw an error if the element can't be disabled, 
+     * but will emit a warning unless logWarning is set to false;
+     * @param logWarning whether to show warnings for elements that cannot be disabled
+     */
+    disable(logWarning = true): Wrapper{
+        try{
+            //doesn't "have" to be a button element, but I disdain telling typescript to ignore errors
+            (<HTMLButtonElement> this.element).disabled = true;
+        }catch(err){
+            if(logWarning){
+                console.warn('Cannot disabled a ' + this.element.tagName + " element.");
+            }
+        }
+        return this;
+    }
+
+    /**
+     * * Will attempt to enable the wrapped element. 
+     * Won't throw an error if the element can't be enabled, 
+     * but will emit a warning unless logWarning is set to false;
+     * @param logWarning whether to show warnings for elements that cannot be enabled
+     */
+     enable(logWarning = true): Wrapper{
+        try{
+            //doesn't "have" to be a button element, but I disdain telling typescript to ignore errors
+            (<HTMLButtonElement> this.element).disabled = false;
+        }catch(err){
+            if(logWarning){
+                console.warn('Cannot enable a ' + this.element.tagName + " element.");
+            }
+        }
+        return this;
+    }
+    
+    /**
+     * Sets (or switches) the value of the 'display' property.
+     * Only supports the 'main 5' types of display.
+     * @param displayVal value of the 'display' property to set
+     */
+    display(displayVal: 'none' | 'block' | 'flex' | 'grid' | 'inline'){
+        this.element.style.display = displayVal;
+    }
 
     ///#region #### Composite Wrappers ####
     /**
@@ -1024,6 +1069,14 @@ export class LabeledInput {
         } else {
             this.input.setVal(val)
         }
+    }
+
+    /**
+     * Returns the value of the observer watching the input
+     * @returns the observed value
+     */
+    getValue(): string | number | boolean{
+        return this.observer.boundVal
     }
 }
 
@@ -1211,7 +1264,8 @@ export class WrapGrid extends Wrapper {
                             grid-row: ${i + 1};
                             grid-column: ${col + 1} / ${k + 1}
                         `)
-                    child.relocate(this, 'inside')
+                    child.relocate(this, 'inside');
+                    this.children.push(child);
                 }
             })
         })
