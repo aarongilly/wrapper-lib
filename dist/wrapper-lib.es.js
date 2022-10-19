@@ -319,7 +319,7 @@ class Wrapper extends Observable {
     classes.remove(className);
     return this;
   }
-  relocate(relativeTo, location) {
+  relocate(relativeTo, location = "inside") {
     if (location === "inside")
       relativeTo.element.appendChild(this.element);
     if (location === "before")
@@ -404,6 +404,30 @@ class Wrapper extends Observable {
         fun(event);
       }
     });
+    return this;
+  }
+  disable(logWarning = true) {
+    try {
+      this.element.disabled = true;
+    } catch (err) {
+      if (logWarning) {
+        console.warn("Cannot disabled a " + this.element.tagName + " element.");
+      }
+    }
+    return this;
+  }
+  enable(logWarning = true) {
+    try {
+      this.element.disabled = false;
+    } catch (err) {
+      if (logWarning) {
+        console.warn("Cannot enable a " + this.element.tagName + " element.");
+      }
+    }
+    return this;
+  }
+  display(displayVal) {
+    this.element.style.display = displayVal;
     return this;
   }
   listContent(textList, idList) {
@@ -524,6 +548,9 @@ class LabeledInput {
     } else {
       this.input.setVal(val);
     }
+  }
+  getValue() {
+    return this.observer.boundVal;
   }
 }
 class WrappedInputLabelPair extends Wrapper {
@@ -652,6 +679,7 @@ class WrapGrid extends Wrapper {
                             grid-column: ${col + 1} / ${k + 1}
                         `);
           child.relocate(this, "inside");
+          this.children.push(child);
         }
       });
     });

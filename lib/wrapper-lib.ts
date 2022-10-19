@@ -856,6 +856,7 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * Won't throw an error if the element can't be disabled, 
      * but will emit a warning unless logWarning is set to false;
      * @param logWarning whether to show warnings for elements that cannot be disabled
+     * @returns this, for chaining.
      */
     disable(logWarning = true): Wrapper{
         try{
@@ -874,6 +875,7 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * Won't throw an error if the element can't be enabled, 
      * but will emit a warning unless logWarning is set to false;
      * @param logWarning whether to show warnings for elements that cannot be enabled
+     * @returns this, for chaining.
      */
      enable(logWarning = true): Wrapper{
         try{
@@ -891,9 +893,11 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * Sets (or switches) the value of the 'display' property.
      * Only supports the 'main 5' types of display.
      * @param displayVal value of the 'display' property to set
+     * @returns this, for chaining.
      */
     display(displayVal: 'none' | 'block' | 'flex' | 'grid' | 'inline'){
         this.element.style.display = displayVal;
+        return this;
     }
 
     ///#region #### Composite Wrappers ####

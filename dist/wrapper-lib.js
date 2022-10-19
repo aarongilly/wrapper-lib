@@ -586,6 +586,7 @@ export class Wrapper extends Observable {
      * Removes the element associated with the wrapper from the page
      */
     kill() {
+        // this.killChildren(); //don't believe this is necessary
         this.element.remove();
     }
     /**
@@ -613,7 +614,7 @@ export class Wrapper extends Observable {
      * @param location where to put this wrapper relative to the other
      * @returns this, for chaining
      */
-    relocate(relativeTo, location) {
+    relocate(relativeTo, location = 'inside') {
         if (location === 'inside')
             relativeTo.element.appendChild(this.element);
         if (location === 'before')
@@ -805,6 +806,54 @@ export class Wrapper extends Observable {
         });
         return this;
     }
+    /**
+     * * Will attempt to disabled the wrapped element.
+     * Won't throw an error if the element can't be disabled,
+     * but will emit a warning unless logWarning is set to false;
+     * @param logWarning whether to show warnings for elements that cannot be disabled
+     * @returns this, for chaining.
+     */
+    disable(logWarning = true) {
+        try {
+            //doesn't "have" to be a button element, but I disdain telling typescript to ignore errors
+            this.element.disabled = true;
+        }
+        catch (err) {
+            if (logWarning) {
+                console.warn('Cannot disabled a ' + this.element.tagName + " element.");
+            }
+        }
+        return this;
+    }
+    /**
+     * * Will attempt to enable the wrapped element.
+     * Won't throw an error if the element can't be enabled,
+     * but will emit a warning unless logWarning is set to false;
+     * @param logWarning whether to show warnings for elements that cannot be enabled
+     * @returns this, for chaining.
+     */
+    enable(logWarning = true) {
+        try {
+            //doesn't "have" to be a button element, but I disdain telling typescript to ignore errors
+            this.element.disabled = false;
+        }
+        catch (err) {
+            if (logWarning) {
+                console.warn('Cannot enable a ' + this.element.tagName + " element.");
+            }
+        }
+        return this;
+    }
+    /**
+     * Sets (or switches) the value of the 'display' property.
+     * Only supports the 'main 5' types of display.
+     * @param displayVal value of the 'display' property to set
+     * @returns this, for chaining.
+     */
+    display(displayVal) {
+        this.element.style.display = displayVal;
+        return this;
+    }
     ///#region #### Composite Wrappers ####
     /**
      * For use with ordered list or unordered list elements. EXPECTS TO BE PUT INSIDE
@@ -983,6 +1032,13 @@ export class LabeledInput {
         else {
             this.input.setVal(val);
         }
+    }
+    /**
+     * Returns the value of the observer watching the input
+     * @returns the observed value
+     */
+    getValue() {
+        return this.observer.boundVal;
     }
 }
 /**
@@ -1177,6 +1233,7 @@ export class WrapGrid extends Wrapper {
                             grid-column: ${col + 1} / ${k + 1}
                         `);
                     child.relocate(this, 'inside');
+                    this.children.push(child);
                 }
             });
         });

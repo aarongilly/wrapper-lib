@@ -372,7 +372,7 @@ export declare class Wrapper extends Observable implements Observer {
      * @param location where to put this wrapper relative to the other
      * @returns this, for chaining
      */
-    relocate(relativeTo: Wrapper, location: "inside" | "after" | "before"): this;
+    relocate(relativeTo: Wrapper, location?: "inside" | "after" | "before"): this;
     /**
      * Returns the value of a given attribute on the wrapped element
      * @returns the value of attribute on the element, or null if no attribute exists
@@ -498,6 +498,29 @@ export declare class Wrapper extends Observable implements Observer {
      */
     onEnterKey(fun: Function): Wrapper;
     /**
+     * * Will attempt to disabled the wrapped element.
+     * Won't throw an error if the element can't be disabled,
+     * but will emit a warning unless logWarning is set to false;
+     * @param logWarning whether to show warnings for elements that cannot be disabled
+     * @returns this, for chaining.
+     */
+    disable(logWarning?: boolean): Wrapper;
+    /**
+     * * Will attempt to enable the wrapped element.
+     * Won't throw an error if the element can't be enabled,
+     * but will emit a warning unless logWarning is set to false;
+     * @param logWarning whether to show warnings for elements that cannot be enabled
+     * @returns this, for chaining.
+     */
+    enable(logWarning?: boolean): Wrapper;
+    /**
+     * Sets (or switches) the value of the 'display' property.
+     * Only supports the 'main 5' types of display.
+     * @param displayVal value of the 'display' property to set
+     * @returns this, for chaining.
+     */
+    display(displayVal: 'none' | 'block' | 'flex' | 'grid' | 'inline'): this;
+    /**
      * For use with ordered list or unordered list elements. EXPECTS TO BE PUT INSIDE
      * AN EXISTING LIST ELEMENT.
      *  Creates a series of LI elements for elements in an List
@@ -558,6 +581,11 @@ export declare class LabeledInput {
     constructor(singleKeyObj: {
         [key: string]: any;
     }, label?: string, forceTextarea?: boolean);
+    /**
+     * Returns the value of the observer watching the input
+     * @returns the observed value
+     */
+    getValue(): string | number | boolean;
 }
 /**
  * This class is a Wrapper-bound {@link LabeledInput}.
