@@ -1315,11 +1315,5 @@ export function debounce(this: any, func: Function, timeout = 300){ //special fa
     };
 }
 */
-/*
-export class WrappedModal extends Wrapper{
-    ... modals? Very very useful.
-    https://www.w3schools.com/howto/howto_css_modals.asp
-}
-*/
 //TODO - any other composites?
 //# sourceMappingURL=wrapper-lib.js.map

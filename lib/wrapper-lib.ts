@@ -250,8 +250,8 @@ type HTMLElementsWithValue = HTMLButtonElement | HTMLInputElement | HTMLMeterEle
 
 export class Wrapper extends Observable implements Observer { //implements Observable, Observer {
     /**
-     * The HTML Element the Wrapper is wrapping. The thing it's adding value to.
-     */
+         * The HTML Element the Wrapper is wrapping. The thing it's adding value to.
+         */
     public element: HTMLElement;
     /**
      * The Wrapper whose wrapped HTML Element contains this.element.
@@ -617,11 +617,13 @@ export class Wrapper extends Observable implements Observer { //implements Obser
 
     /**
      * Removes any child wrappers from the parent wrapper
+     * @returns this, for chaining
      */
     killChildren() {
         this.children.forEach((child) => {
             child.kill();
         })
+        return this
     }
 
     /**
@@ -858,12 +860,12 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * @param logWarning whether to show warnings for elements that cannot be disabled
      * @returns this, for chaining.
      */
-    disable(logWarning = true): Wrapper{
-        try{
+    disable(logWarning = true): Wrapper {
+        try {
             //doesn't "have" to be a button element, but I disdain telling typescript to ignore errors
-            (<HTMLButtonElement> this.element).disabled = true;
-        }catch(err){
-            if(logWarning){
+            (<HTMLButtonElement>this.element).disabled = true;
+        } catch (err) {
+            if (logWarning) {
                 console.warn('Cannot disabled a ' + this.element.tagName + " element.");
             }
         }
@@ -877,25 +879,32 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * @param logWarning whether to show warnings for elements that cannot be enabled
      * @returns this, for chaining.
      */
-     enable(logWarning = true): Wrapper{
-        try{
+    enable(logWarning = true): Wrapper {
+        try {
             //doesn't "have" to be a button element, but I disdain telling typescript to ignore errors
-            (<HTMLButtonElement> this.element).disabled = false;
-        }catch(err){
-            if(logWarning){
+            (<HTMLButtonElement>this.element).disabled = false;
+        } catch (err) {
+            if (logWarning) {
                 console.warn('Cannot enable a ' + this.element.tagName + " element.");
             }
         }
         return this;
     }
-    
+
+    isEnabled(): boolean {
+        if (this.element.hasOwnProperty('disabled')) {
+            return (<any>!this.element).disabled
+        }
+        return true;
+    }
+
     /**
      * Sets (or switches) the value of the 'display' property.
      * Only supports the 'main 5' types of display.
      * @param displayVal value of the 'display' property to set
      * @returns this, for chaining.
      */
-    display(displayVal: 'none' | 'block' | 'flex' | 'grid' | 'inline'){
+    display(displayVal: 'none' | 'block' | 'flex' | 'grid' | 'inline') {
         this.element.style.display = displayVal;
         return this;
     }
@@ -909,7 +918,7 @@ export class Wrapper extends Observable implements Observer { //implements Obser
      * @param idList optional IDs to include
      * @returns this, for chaining
      */
-    listContent(textList: string[], idList?: string[]) {
+    listContent(textList: string[], idList?: string[], memberStyle?: string) {
         if (this.element.tagName != 'UL' && this.element.tagName != 'OL') {
             console.error(`The Wrapper instance from which listContent was called is not 
             wrapped around a 'ul' or 'ol' element. It's a ${this.element}`);
@@ -922,11 +931,13 @@ export class Wrapper extends Observable implements Observer { //implements Obser
                 throw new Error('textList and idList not the same length');
             }
             textList.forEach((text, ind) => {
-                this.newWrap('li', { 'i': idList[ind] }).text(text);
+                let member = this.newWrap('li', { 'i': idList[ind] }).text(text);
+                if(memberStyle) member.style(memberStyle);
             })
         } else {
             textList.forEach((text) => {
-                this.newWrap('li').text(text);
+                let member = this.newWrap('li').text(text);
+                if(memberStyle) member.style(memberStyle);
             })
         }
         return this;
@@ -1079,7 +1090,7 @@ export class LabeledInput {
      * Returns the value of the observer watching the input
      * @returns the observed value
      */
-    getValue(): string | number | boolean{
+    getValue(): string | number | boolean {
         return this.observer.boundVal
     }
 }
@@ -1301,6 +1312,68 @@ export class WrapGrid extends Wrapper {
 }
 
 /**
+ * Modal Class is for creating a Wrapper that sits in the middle of the screen.
+ */
+export class Modal extends Wrapper {
+    public visiblePart: Wrapper;
+    public background: Wrapper;
+    constructor(preventScroll = true, backgroundClickCloses = true, modalColor = 'white', backgroundColor: undefined | string = undefined) {
+        super('div');
+        this.background = this;//confusing, but I think this could be helpful
+        if (preventScroll) document.querySelector('body')!.style.overflow = 'hidden';
+        this.style(Modal.modalBackgroundStyle)
+        if(backgroundColor) this.style('background-color: ' + backgroundColor, true);
+        
+        if(backgroundClickCloses) this.onClick(() => {
+            if (preventScroll) document.querySelector('body')!.style.overflow = 'auto';
+            this.kill();
+        })
+
+        this.visiblePart = this.newWrap('div');
+        this.visiblePart.style(Modal.modalStyle).onClick((event: PointerEvent) => {
+            console.log('preventing I guess');
+            event.stopPropagation();
+            event.preventDefault();
+        });
+        if(modalColor) this.visiblePart.style('background-color: ' + modalColor, true);
+    }
+
+    //pseudonym
+    public close(){
+        this.kill();
+    }
+
+    //override wrapper.kill to ensure the scroll behavior is reset
+    kill(): void {
+        document.querySelector('body')!.style.overflow = 'auto'
+        super.kill(); //I get super now!
+    }
+
+    addCloseButton(buttonText: string){
+        this.visiblePart.newWrap('button').text(buttonText).onClick(()=>{
+            this.kill();
+        })
+    }
+
+    /**
+     * The primary way to create a Modal
+     * @param preventScroll 
+     * @param backgroundClickCloses 
+     * @param backgroundColor 
+     * @returns 
+     */
+    static showModal(preventScroll = true, backgroundClickCloses = true, modalColor = 'white', backgroundColor: undefined | string = undefined): Modal {
+        let modal = new Modal(preventScroll, backgroundClickCloses, modalColor, backgroundColor);
+        document.querySelector('body')!.appendChild(modal.element);
+        return modal;
+    }
+
+    static modalBackgroundStyle = 'position: fixed; width: 100vw; height: 100vh; transition: all 0.3s ease; top: 0; left: 0; display: flex; align-items: center; justify-content: center;';
+
+    static modalStyle = 'overflow: hidden; box-shadow: 0 0 10px black; border-radius: 10px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999; padding: 10px; text-align: center; opacity: 1;';
+}
+
+/**
  * Checks whether the given input is a primative value.
  * @param myVar variable to check
  * @returns true if variable is primative, false if an object or a function
@@ -1317,7 +1390,7 @@ export const isPrimative = (myVar: any): boolean => {
  * @returns true if variable is a Date object
  */
 export const isDate = (maybeDate: any): boolean => {
-    if (isPrimative(maybeDate)) return false;
+    if (isPrimative(maybeDate) || maybeDate === undefined) return false;
     return Object.prototype.toString.call(maybeDate) === "[object Date]";
 }
 

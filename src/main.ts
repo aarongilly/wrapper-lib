@@ -1,5 +1,5 @@
 import './style.css'
-import { Observer, Wrapper, Observable, DynamicForm, WrapGrid } from '../lib/wrapper-lib'
+import { Observer, Wrapper, Observable, DynamicForm, WrapGrid, Modal } from '../lib/wrapper-lib'
 
 const app = Wrapper.wrap(document.querySelector<HTMLDivElement>('#app')!);
 app.newWrap('h1', { t: 'Wrapper Library Demo Page' });
@@ -42,6 +42,15 @@ compositeSection.newWrap('button').text('Add Row').style('margin-top: 1em').onCl
   wg.addRow([w9, 'merge' ,'merge'])
 })
 //#endregion
+
+let modalSection = app.newWrap('section', {h: "<h1>Modal Examples</h1>"});
+modalSection.newWrap('p', { t: "Another common situation: modals.", c: 'explanatory' });
+modalSection.newWrap('button').text('Click Me to Show Modal').onClick(()=>{
+  let modal = Modal.showModal(false, true, 'white', 'hsla(0 0% 40% / 75%)');
+  modal.visiblePart.newWrap('h1').text('I am a Modal');
+  modal.visiblePart.newWrap('p').text('Click outside me to close (or the button)');
+  modal.addCloseButton('close');
+})
 
 //#region #### Binding with Variables Section ####
 let bSect = app.newWrap('section', { h: '<h1>Binding with Observables</h1>' });
